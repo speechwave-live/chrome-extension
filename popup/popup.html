@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: sans-serif; width: 240px; padding: 16px; margin: 0; }
+    h3 { margin: 0 0 12px; }
+    label { font-size: 12px; font-weight: 600; color: #5f6368; }
+    input { width: 100%; box-sizing: border-box; padding: 6px; margin: 4px 0 12px;
+            border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    button { width: 100%; padding: 8px; background: #4285f4; color: white;
+             border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    #status { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+    .dot.connected { background: #34a853; }
+    #session-section { display: none; margin-top: 12px; border-top: 1px solid #444; padding-top: 12px; }
+    #session-status { font-size: 12px; color: #aaa; margin-bottom: 8px; min-height: 16px; }
+    #session-btn { background: #34a853; }
+    #session-btn.stop { background: #ea4335; }
+  </style>
+</head>
+<body>
+  <h3>JoyConf</h3>
+  <div id="status"><div class="dot" id="dot"></div><span id="status-text">Disconnected</span></div>
+  <label for="slug-input">Talk Slug</label>
+  <input id="slug-input" type="text" placeholder="elixir-for-rubyists">
+  <button id="connect-btn">Connect</button>
+
+  <div id="session-section">
+    <div id="slide-indicator" style="font-size: 12px; color: #5f6368; margin-bottom: 8px;">Slide —</div>
+    <div id="session-status">No active session</div>
+    <button id="session-btn">Start Session</button>
+  </div>
+
+  <div id="fireworks-section" style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px;">
+    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0;">
+      <input type="checkbox" id="fireworks-toggle">
+      <span style="font-size: 12px; font-weight: 600; color: #5f6368;">Fireworks animations</span>
+    </label>
+    <button id="test-fireworks-btn" style="display: none; margin-top: 8px; background: #f9ab00;">Test Fireworks</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

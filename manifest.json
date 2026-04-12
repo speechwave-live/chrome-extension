@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "JoyConf",
+  "version": "1.0.0",
+  "description": "Live emoji reactions overlay for conference talks",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "http://localhost/*",
+    "https://joyconf.fly.dev/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "JoyConf"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://docs.google.com/presentation/*"],
+      "js": ["lib/phoenix.js", "lib/fireworks.js", "adapters/google_slides.js", "adapters/index.js", "content/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
