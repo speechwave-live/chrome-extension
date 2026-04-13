@@ -129,5 +129,6 @@ chrome.runtime.onMessage.addListener((msg) => {
   } else if (msg.type === "CONNECT_ERROR") {
     const messages = { capacity_reached: "Talk is at capacity" };
     setError(messages[msg.reason] || "Connection failed");
+    setStatus(false);
   }
 });
