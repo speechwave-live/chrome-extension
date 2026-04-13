@@ -39,5 +39,5 @@ function getSlide() {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { getSlide };
 } else {
-  window.JoyconfGoogleSlidesAdapter = { getSlide };
+  window.SpeechwaveGoogleSlidesAdapter = { getSlide };
 }
