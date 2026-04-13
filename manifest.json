@@ -1,16 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "JoyConf",
+  "name": "Speechwave",
   "version": "1.0.0",
   "description": "Live emoji reactions overlay for conference talks",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
     "http://localhost/*",
-    "https://joyconf.fly.dev/*"
+    "https://speechwave.fly.dev/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "JoyConf"
+    "default_title": "Speechwave"
   },
   "content_scripts": [
     {
