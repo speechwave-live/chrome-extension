@@ -1,7 +1,7 @@
 // Phoenix UMD build loaded before this file exposes window.Phoenix
 const { Socket } = window.Phoenix;
 
-// const HOST = "wss://joyconf.fly.dev";
+// const HOST = "wss://speechwave.fly.dev";
 const HOST = "ws://localhost:4000";
 
 let socket = null;
@@ -22,7 +22,7 @@ let lastFireworksTime = 0;
 // Inject animation keyframes once
 const style = document.createElement("style");
 style.textContent = `
-  @keyframes joyconfFloat {
+  @keyframes speechwaveFloat {
     0%   { transform: translateY(0);    opacity: 1; }
     100% { transform: translateY(-60px); opacity: 0; }
   }
@@ -30,10 +30,10 @@ style.textContent = `
 document.head.appendChild(style);
 
 function getOrCreateOverlay() {
-  let overlay = document.getElementById("joyconf-overlay");
+  let overlay = document.getElementById("speechwave-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
-    overlay.id = "joyconf-overlay";
+    overlay.id = "speechwave-overlay";
     overlay.style.cssText = [
       "position: fixed",
       "bottom: 40px",
@@ -53,7 +53,7 @@ function getOrCreateOverlay() {
 // stacking context — elements appended to <body> won't appear on top of it.
 // Re-parent the overlay into the fullscreen element so it remains visible.
 document.addEventListener("fullscreenchange", () => {
-  const overlay = document.getElementById("joyconf-overlay");
+  const overlay = document.getElementById("speechwave-overlay");
   if (!overlay) return;
 
   if (document.fullscreenElement) {
@@ -74,7 +74,7 @@ function spawnEmoji(emoji) {
     "bottom: 0",
     `left: ${Math.floor(Math.random() * 70)}%`,
     "font-size: 28px",
-    "animation: joyconfFloat 2.5s ease-out forwards",
+    "animation: speechwaveFloat 2.5s ease-out forwards",
     "pointer-events: none",
   ].join(";");
   overlay.appendChild(el);
@@ -91,7 +91,7 @@ function maybeSpawnFireworks(emoji) {
   if (!fireworksEnabled) return;
   if (fireworksActive) return;
   if (Date.now() - lastFireworksTime < FIREWORKS_COOLDOWN_MS) return;
-  if (window.JoyconfFireworks.checkFireworksTrigger(inFlight, emoji, {
+  if (window.SpeechwaveFireworks.checkFireworksTrigger(inFlight, emoji, {
     minCount: FIREWORKS_MIN_COUNT,
     minPercent: FIREWORKS_MIN_PERCENT,
   })) {
@@ -159,9 +159,9 @@ function connect(slug) {
   }
 
   socket = new Socket(`${HOST}/socket`, {
-    logger: (kind, msg, data) => console.debug(`[JoyConf] ${kind}: ${msg}`, data)
+    logger: (kind, msg, data) => console.debug(`[Speechwave] ${kind}: ${msg}`, data)
   });
-  socket.onError(() => console.error("[JoyConf] Socket error — check HOST and that the server is running"));
+  socket.onError(() => console.error("[Speechwave] Socket error — check HOST and that the server is running"));
   socket.connect();
 
   channel = socket.channel(`reactions:${slug}`, {});
@@ -169,11 +169,11 @@ function connect(slug) {
   channel
     .join()
     .receive("ok", () => {
-      console.log(`[JoyConf] Joined reactions:${slug}`);
+      console.log(`[Speechwave] Joined reactions:${slug}`);
       startSlideObserver();
     })
     .receive("error", ({ reason }) => {
-      console.error(`[JoyConf] Channel join failed: ${reason}`);
+      console.error(`[Speechwave] Channel join failed: ${reason}`);
       socket.disconnect();
       socket = null;
     });
@@ -187,7 +187,7 @@ function isConnected() {
 }
 
 function startSlideObserver() {
-  const registry = window.JoyconfAdapterRegistry;
+  const registry = window.SpeechwaveAdapterRegistry;
   if (!registry) return;
 
   const adapter = registry.getAdapter(window.location.href);
