@@ -1,12 +1,18 @@
 # Speechwave Chrome Extension
 
-Chrome Manifest V3 extension for [Speechwave](https://github.com/speechwave-live/speechwave). Connects to a running talk and overlays live emoji reactions on Google Slides. Tracks the current slide number and sends it to the server so reactions can be stamped with slide context.
+Chrome Manifest V3 extension for
+[Speechwave](https://github.com/speechwave-live/speechwave). Connects to a
+running talk and overlays live emoji reactions on Google Slides. Tracks the
+current slide number and sends it to the server so reactions can be stamped
+with slide context.
 
 ## How it works
 
 The extension has two parts:
 
-**Popup (`popup.html` + `popup.js`)** — A small UI that appears when you click the extension icon. The speaker enters the talk slug and clicks "Connect". The popup sends a message to the content script via `chrome.runtime.sendMessage`.
+**Popup (`popup.html` + `popup.js`)** — A small UI that appears when you click
+the extension icon. The speaker enters the talk slug and clicks "Connect". The
+popup sends a message to the content script via `chrome.runtime.sendMessage`.
 
 **Content script (`content/content.js`)** — Injected into Google Slides pages. It:
 
