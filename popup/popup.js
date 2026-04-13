@@ -109,6 +109,9 @@ sessionBtn.addEventListener("click", () => {
           currentSessionId = response.session_id;
           chrome.storage.local.set({ sessionId: response.session_id });
           setSessionUI(true, response.label);
+        } else if (response?.error) {
+          const messages = { session_limit_reached: "Monthly session limit reached" };
+          setError(messages[response.error] || "Could not start session");
         }
       });
     }
