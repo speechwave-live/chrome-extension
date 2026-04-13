@@ -174,6 +174,7 @@ function connect(slug) {
     })
     .receive("error", ({ reason }) => {
       console.error(`[Speechwave] Channel join failed: ${reason}`);
+      stopSlideObserver();
       socket.disconnect();
       socket = null;
       channel = null;
