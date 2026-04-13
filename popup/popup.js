@@ -90,6 +90,7 @@ connectBtn.addEventListener("click", () => {
 });
 
 sessionBtn.addEventListener("click", () => {
+  setError(null);
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
     if (currentSessionId) {
       chrome.tabs.sendMessage(
