@@ -10,6 +10,17 @@ const sessionBtn = document.getElementById("session-btn");
 const slideIndicator = document.getElementById("slide-indicator");
 const fireworksToggle = document.getElementById("fireworks-toggle");
 const testFireworksBtn = document.getElementById("test-fireworks-btn");
+const errorMsg = document.getElementById("error-msg");
+
+function setError(msg) {
+  if (msg) {
+    errorMsg.textContent = msg;
+    errorMsg.style.display = "block";
+  } else {
+    errorMsg.textContent = "";
+    errorMsg.style.display = "none";
+  }
+}
 
 let currentSessionId = null;
 
@@ -66,6 +77,8 @@ function setSlideIndicator(slide) {
 connectBtn.addEventListener("click", () => {
   const slug = slugInput.value.trim();
   if (!slug) return;
+
+  setError(null);
 
   chrome.storage.local.set({ slug });
 
