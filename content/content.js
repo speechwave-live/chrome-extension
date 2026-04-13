@@ -174,7 +174,7 @@ function connect(slug) {
     })
     .receive("error", ({ reason }) => {
       console.error(`[Speechwave] Channel join failed: ${reason}`);
-      stopSlideObserver();
+      stopSlideObserver(); // defensive: mirrors connect() teardown if observer ever starts earlier
       socket.disconnect();
       socket = null;
       channel = null;
