@@ -126,5 +126,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "SLIDE_CHANGED") {
     setSlideIndicator(msg.slide);
+  } else if (msg.type === "CONNECT_ERROR") {
+    const messages = { capacity_reached: "Talk is at capacity" };
+    setError(messages[msg.reason] || "Connection failed");
   }
 });

@@ -176,6 +176,9 @@ function connect(slug) {
       console.error(`[Speechwave] Channel join failed: ${reason}`);
       socket.disconnect();
       socket = null;
+      chrome.runtime.sendMessage({ type: "CONNECT_ERROR", reason }, () => {
+        void chrome.runtime.lastError;
+      });
     });
 
   getOrCreateOverlay();
