@@ -150,7 +150,7 @@ function spawnFireworks(emoji) {
   }
 }
 
-function connect(slug) {
+function connect(slug, apiKey) {
   if (socket) {
     socket.disconnect();
     socket = null;
@@ -164,7 +164,7 @@ function connect(slug) {
   socket.onError(() => console.error("[Speechwave] Socket error — check HOST and that the server is running"));
   socket.connect();
 
-  channel = socket.channel(`reactions:${slug}`, {});
+  channel = socket.channel(`reactions:${slug}`, { api_key: apiKey });
   channel.on("new_reaction", ({ emoji }) => spawnEmoji(emoji));
   channel
     .join()
@@ -182,6 +182,15 @@ function connect(slug) {
         void chrome.runtime.lastError;
       });
     });
+
+  channel.onClose(() => {
+    stopSlideObserver();
+    socket = null;
+    channel = null;
+    chrome.runtime.sendMessage({ type: "CONNECT_ERROR", reason: "key_updated" }, () => {
+      void chrome.runtime.lastError;
+    });
+  });
 
   getOrCreateOverlay();
   return true;
@@ -224,7 +233,7 @@ function stopSlideObserver() {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "SET_SLUG") {
-    const connected = connect(msg.slug);
+    const connected = connect(msg.slug, msg.apiKey);
     sendResponse({ connected });
   } else if (msg.type === "GET_STATUS") {
     sendResponse({ connected: isConnected(), slide: currentSlide });
@@ -261,7 +270,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // Auto-connect on page load if slug is saved
 chrome.storage.local.get("slug", ({ slug }) => {
-  if (slug) connect(slug);
+  if (slug) {
+    chrome.storage.sync.get("apiKey", ({ apiKey }) => {
+      if (apiKey) connect(slug, apiKey);
+    });
+  }
 });
 
 chrome.storage.sync.get({ fireworksEnabled: true }, ({ fireworksEnabled: val }) => {
