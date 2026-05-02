@@ -98,7 +98,7 @@ if (DEV_MODE) {
 // --- Connect ---
 connectBtn.addEventListener("click", () => {
   const slug = slugInput.value.trim();
-  if (!slug) return;
+  if (!slug || !storedApiKey) return;
   setError(null);
   chrome.storage.local.set({ slug });
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {

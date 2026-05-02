@@ -6,6 +6,7 @@ const HOST = "ws://localhost:4000";
 
 let socket = null;
 let channel = null;
+let intentionalDisconnect = false;
 let slideInterval = null;
 let currentSlide = 0;
 
@@ -152,6 +153,7 @@ function spawnFireworks(emoji) {
 
 function connect(slug, apiKey) {
   if (socket) {
+    intentionalDisconnect = true;
     socket.disconnect();
     socket = null;
     channel = null;
@@ -184,6 +186,10 @@ function connect(slug, apiKey) {
     });
 
   channel.onClose(() => {
+    if (intentionalDisconnect) {
+      intentionalDisconnect = false;
+      return;
+    }
     stopSlideObserver();
     socket = null;
     channel = null;
