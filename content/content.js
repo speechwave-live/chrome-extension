@@ -1,8 +1,8 @@
 // Phoenix UMD build loaded before this file exposes window.Phoenix
 const { Socket } = window.Phoenix;
 
-// const HOST = "wss://speechwave.fly.dev";
-const HOST = "ws://localhost:4000";
+const DEV_MODE = false; // set to true locally for testing
+const HOST = DEV_MODE ? "ws://localhost:4000" : "wss://speechwave.live";
 
 let socket = null;
 let channel = null;
