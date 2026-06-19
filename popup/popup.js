@@ -82,20 +82,16 @@ chrome.storage.sync.get({ fireworksEnabled: true }, ({ fireworksEnabled }) => {
 fireworksToggle.addEventListener("change", () => {
   const enabled = fireworksToggle.checked;
   chrome.storage.sync.set({ fireworksEnabled: enabled });
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    chrome.tabs.sendMessage(tab.id, { type: "SET_FIREWORKS", enabled }, () => {
-      void chrome.runtime.lastError;
-    });
+  chrome.runtime.sendMessage({ type: "SET_FIREWORKS", enabled }, () => {
+    void chrome.runtime.lastError;
   });
 });
 
 if (DEV_MODE) {
   testFireworksBtn.style.display = "block";
   testFireworksBtn.addEventListener("click", () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      chrome.tabs.sendMessage(tab.id, { type: "TEST_FIREWORKS" }, () => {
-        void chrome.runtime.lastError;
-      });
+    chrome.runtime.sendMessage({ type: "TEST_FIREWORKS" }, () => {
+      void chrome.runtime.lastError;
     });
   });
 }
@@ -105,42 +101,37 @@ connectBtn.addEventListener("click", () => {
   const slug = slugInput.value.trim();
   if (!slug || !storedApiKey) return;
   setError(null);
-  chrome.storage.local.set({ slug });
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    chrome.tabs.sendMessage(tab.id, { type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
-      setStatus(response?.connected ?? false);
-    });
+  chrome.runtime.sendMessage({ type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
+    setStatus(response?.connected ?? false);
   });
 });
 
 // --- Session ---
 sessionBtn.addEventListener("click", () => {
   setError(null);
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    if (currentSessionId) {
-      chrome.tabs.sendMessage(tab.id, { type: "STOP_SESSION", sessionId: currentSessionId }, (response) => {
-        if (response?.stopped) {
-          currentSessionId = null;
-          chrome.storage.local.remove("sessionId");
-          setSessionUI(false);
-        }
-      });
-    } else {
-      chrome.tabs.sendMessage(tab.id, { type: "START_SESSION" }, (response) => {
-        if (response?.session_id) {
-          currentSessionId = response.session_id;
-          chrome.storage.local.set({ sessionId: response.session_id });
-          setSessionUI(true, response.label);
-        } else if (response?.error) {
-          const messages = {
-            session_limit_reached: "Monthly session limit reached",
-            not_connected: "Not connected to a talk",
-          };
-          setError(messages[response.error] || "Could not start session");
-        }
-      });
-    }
-  });
+  if (currentSessionId) {
+    chrome.runtime.sendMessage({ type: "STOP_SESSION", sessionId: currentSessionId }, (response) => {
+      if (response?.stopped) {
+        currentSessionId = null;
+        chrome.storage.local.remove("sessionId");
+        setSessionUI(false);
+      }
+    });
+  } else {
+    chrome.runtime.sendMessage({ type: "START_SESSION" }, (response) => {
+      if (response?.session_id) {
+        currentSessionId = response.session_id;
+        chrome.storage.local.set({ sessionId: response.session_id });
+        setSessionUI(true, response.label);
+      } else if (response?.error) {
+        const messages = {
+          session_limit_reached: "Monthly session limit reached",
+          not_connected: "Not connected to a talk",
+        };
+        setError(messages[response.error] || "Could not start session");
+      }
+    });
+  }
 });
 
 // --- Init ---
@@ -157,11 +148,9 @@ chrome.storage.sync.get(["apiKey"], ({ apiKey }) => {
       }
     });
 
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      chrome.tabs.sendMessage(tab.id, { type: "GET_STATUS" }, (response) => {
-        setStatus(response?.connected ?? false);
-        setSlideIndicator(response?.slide ?? 0);
-      });
+    chrome.runtime.sendMessage({ type: "GET_STATUS" }, (response) => {
+      setStatus(response?.connected ?? false);
+      setSlideIndicator(response?.slide ?? 0);
     });
   } else {
     showSetup();
