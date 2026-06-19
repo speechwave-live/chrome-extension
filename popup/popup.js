@@ -59,6 +59,11 @@ function setSlideIndicator(slide) {
 }
 
 // --- API key setup ---
+document.getElementById("change-api-key-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  showSetup();
+});
+
 saveApiKeyBtn.addEventListener("click", () => {
   const key = apiKeyInput.value.trim();
   if (!key) return;
