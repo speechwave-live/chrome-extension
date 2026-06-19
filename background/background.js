@@ -61,8 +61,6 @@ function connect(slug, apiKey) {
     currentSlide = 0;
   }
 
-  intentionalDisconnect = false;
-
   socket = new Socket(`${HOST}/socket`, {
     logger: (kind, msg, data) => console.debug(`[Speechwave SW] ${kind}: ${msg}`, data),
   });
