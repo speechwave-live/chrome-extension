@@ -1,15 +1,3 @@
-// Phoenix UMD build loaded before this file exposes window.Phoenix
-const { Socket } = window.Phoenix;
-
-const DEV_MODE = false; // set to true locally for testing
-const HOST = DEV_MODE ? "ws://localhost:4000" : "wss://speechwave.live";
-
-let socket = null;
-let channel = null;
-let intentionalDisconnect = false;
-let slideInterval = null;
-let currentSlide = 0;
-
 const FIREWORKS_MIN_COUNT = 5;
 const FIREWORKS_MIN_PERCENT = 0.4;
 const FIREWORKS_COOLDOWN_MS = 8000;
@@ -19,8 +7,9 @@ const inFlight = {};
 let fireworksEnabled = false;
 let fireworksActive = false;
 let lastFireworksTime = 0;
+let slideInterval = null;
+let currentSlide = 0;
 
-// Inject animation keyframes once
 const style = document.createElement("style");
 style.textContent = `
   @keyframes speechwaveFloat {
@@ -50,13 +39,9 @@ function getOrCreateOverlay() {
   return overlay;
 }
 
-// When the browser enters/exits fullscreen, the fullscreen element forms its own
-// stacking context — elements appended to <body> won't appear on top of it.
-// Re-parent the overlay into the fullscreen element so it remains visible.
 document.addEventListener("fullscreenchange", () => {
   const overlay = document.getElementById("speechwave-overlay");
   if (!overlay) return;
-
   if (document.fullscreenElement) {
     document.fullscreenElement.appendChild(overlay);
   } else {
@@ -110,8 +95,8 @@ function spawnFireworks(emoji) {
   }
 
   const overlay = getOrCreateOverlay();
-  const cx = 80;  // overlay is always 160px wide
-  const cy = 100; // overlay is always 200px tall
+  const cx = 80;
+  const cy = 100;
   let remaining = FIREWORKS_BURST_COUNT;
   const safetyTimer = setTimeout(() => { fireworksActive = false; }, 2000);
 
@@ -151,121 +136,32 @@ function spawnFireworks(emoji) {
   }
 }
 
-function connect(slug, apiKey) {
-  if (socket) {
-    intentionalDisconnect = true;
-    socket.disconnect();
-    socket = null;
-    channel = null;
-    stopSlideObserver();
-  }
-
-  socket = new Socket(`${HOST}/socket`, {
-    logger: (kind, msg, data) => console.debug(`[Speechwave] ${kind}: ${msg}`, data)
-  });
-  socket.onError(() => console.error("[Speechwave] Socket error — check HOST and that the server is running"));
-  socket.connect();
-
-  channel = socket.channel(`reactions:${slug}`, { api_key: apiKey });
-  channel.on("new_reaction", ({ emoji }) => spawnEmoji(emoji));
-  channel
-    .join()
-    .receive("ok", () => {
-      console.log(`[Speechwave] Joined reactions:${slug}`);
-      startSlideObserver();
-    })
-    .receive("error", ({ reason }) => {
-      console.error(`[Speechwave] Channel join failed: ${reason}`);
-      stopSlideObserver(); // defensive: mirrors connect() teardown if observer ever starts earlier
-      socket.disconnect();
-      socket = null;
-      channel = null;
-      chrome.runtime.sendMessage({ type: "CONNECT_ERROR", reason }, () => {
-        void chrome.runtime.lastError;
-      });
-    });
-
-  channel.onClose(() => {
-    if (intentionalDisconnect) {
-      intentionalDisconnect = false;
-      return;
-    }
-    stopSlideObserver();
-    socket = null;
-    channel = null;
-    chrome.runtime.sendMessage({ type: "CONNECT_ERROR", reason: "key_updated" }, () => {
-      void chrome.runtime.lastError;
-    });
-  });
-
-  getOrCreateOverlay();
-  return true;
-}
-
-function isConnected() {
-  return socket !== null && socket.isConnected();
-}
-
 function startSlideObserver() {
   const registry = window.SpeechwaveAdapterRegistry;
   if (!registry) return;
 
   const adapter = registry.getAdapter(window.location.href);
+  if (!adapter) return;
 
   function checkSlide() {
     const slide = adapter.getSlide();
     if (slide !== currentSlide) {
       currentSlide = slide;
-      if (channel) {
-        channel.push("slide_changed", { slide: currentSlide });
-      }
       chrome.runtime.sendMessage({ type: "SLIDE_CHANGED", slide: currentSlide }, () => {
-        void chrome.runtime.lastError; // suppress "no listener" error when popup is closed
+        void chrome.runtime.lastError;
       });
     }
   }
 
-  checkSlide(); // read immediately on connect
+  checkSlide();
   slideInterval = setInterval(checkSlide, 500);
 }
 
-function stopSlideObserver() {
-  if (slideInterval) {
-    clearInterval(slideInterval);
-    slideInterval = null;
-  }
-  currentSlide = 0;
-}
-
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === "SET_SLUG") {
-    const connected = connect(msg.slug, msg.apiKey);
-    sendResponse({ connected });
-  } else if (msg.type === "GET_STATUS") {
-    sendResponse({ connected: isConnected(), slide: currentSlide });
-  } else if (msg.type === "START_SESSION") {
-    if (!channel) {
-      sendResponse({ error: "not_connected" });
-      return;
-    }
-    channel
-      .push("start_session", {})
-      .receive("ok", ({ session_id, label }) => sendResponse({ session_id, label }))
-      .receive("error", ({ reason }) => sendResponse({ error: reason }));
-    return true; // keep the message channel open for the async reply
-  } else if (msg.type === "STOP_SESSION") {
-    if (!channel) {
-      sendResponse({ error: "not_connected" });
-      return;
-    }
-    channel
-      .push("stop_session", { session_id: msg.sessionId })
-      .receive("ok", () => sendResponse({ stopped: true }))
-      .receive("error", ({ reason }) => sendResponse({ error: reason }));
-    return true; // keep the message channel open for the async reply
+  if (msg.type === "RENDER_EMOJI") {
+    spawnEmoji(msg.emoji);
   } else if (msg.type === "SET_FIREWORKS") {
     fireworksEnabled = msg.enabled;
-    // no response needed — popup fires and forgets
   } else if (msg.type === "TEST_FIREWORKS") {
     if (!fireworksActive) {
       const testEmojis = ["❤️", "😂", "👏", "🤯", "🙋🏻", "🎉", "💩", "😮", "🎯"];
@@ -274,14 +170,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-// Auto-connect on page load if slug is saved
-chrome.storage.local.get("slug", ({ slug }) => {
-  if (slug) {
-    chrome.storage.sync.get("apiKey", ({ apiKey }) => {
-      if (apiKey) connect(slug, apiKey);
-    });
-  }
-});
+getOrCreateOverlay();
+startSlideObserver();
 
 chrome.storage.sync.get({ fireworksEnabled: true }, ({ fireworksEnabled: val }) => {
   fireworksEnabled = val;
