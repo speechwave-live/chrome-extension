@@ -372,6 +372,41 @@ describe("new_reaction channel event", () => {
 // Auto-reconnect on service worker startup
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Stale connection handler race condition
+// ---------------------------------------------------------------------------
+
+describe("stale connection handlers", () => {
+  test("join error from a previous connect() does not kill the current connection", () => {
+    const { messageHandler } = loadBackground();
+
+    // First connect (e.g., auto-reconnect with old API key)
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "old-key" }, {}, jest.fn());
+    const staleChannel = mockChannel;
+
+    // Second connect before the first join completes (user entered new key)
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "new-key" }, {}, jest.fn());
+
+    // Current connection should be alive
+    const statusBefore = jest.fn();
+    messageHandler({ type: "GET_STATUS" }, {}, statusBefore);
+    expect(statusBefore).toHaveBeenCalledWith({ connected: true, slide: 0 });
+
+    // Server responds to the FIRST join with "unauthorized" (old key is invalid).
+    // This stale error handler must not disconnect the current (second) connection.
+    staleChannel.joinReceiveHandlers["error"]({ reason: "unauthorized" });
+
+    // Current connection should STILL be alive
+    const statusAfter = jest.fn();
+    messageHandler({ type: "GET_STATUS" }, {}, statusAfter);
+    expect(statusAfter).toHaveBeenCalledWith({ connected: true, slide: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auto-reconnect on service worker startup
+// ---------------------------------------------------------------------------
+
 describe("auto-reconnect on startup", () => {
   test("calls connect when slug and apiKey are found in storage", () => {
     loadBackground({ slug: "saved-talk", apiKey: "saved-key" });

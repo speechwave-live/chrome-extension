@@ -61,42 +61,44 @@ function connect(slug, apiKey) {
     currentSlide = 0;
   }
 
-  socket = new Socket(`${HOST}/socket`, {
+  const s = new Socket(`${HOST}/socket`, {
     logger: (kind, msg, data) => console.debug(`[Speechwave SW] ${kind}: ${msg}`, data),
   });
 
-  socket.onError(() => {
+  s.onError(() => {
     console.error('[Speechwave SW] Socket error — check HOST and that the server is running');
   });
 
-  socket.connect();
+  s.connect();
 
-  channel = socket.channel(`reactions:${slug}`, { api_key: apiKey });
+  const c = s.channel(`reactions:${slug}`, { api_key: apiKey });
+  socket = s;
+  channel = c;
 
-  channel.on('new_reaction', ({ emoji }) => {
+  c.on('new_reaction', ({ emoji }) => {
     broadcastToSlidesTabs({ type: 'RENDER_EMOJI', emoji });
   });
 
-  channel
-    .join()
+  c.join()
     .receive('ok', () => {
       log(`Joined reactions:${slug}`);
     })
     .receive('error', ({ reason }) => {
       console.error(`[Speechwave SW] Channel join failed: ${reason}`);
-      socket.disconnect();
-      socket = null;
-      channel = null;
+      s.disconnect();
+      if (socket === s) socket = null;
+      if (channel === c) channel = null;
       notifyPopup({ type: 'CONNECT_ERROR', reason });
     });
 
-  channel.onClose(() => {
+  c.onClose(() => {
     if (intentionalDisconnect) {
       intentionalDisconnect = false;
       return;
     }
-    socket = null;
-    channel = null;
+    s.disconnect();
+    if (socket === s) socket = null;
+    if (channel === c) channel = null;
     notifyPopup({ type: 'CONNECT_ERROR', reason: 'key_updated' });
   });
 }
