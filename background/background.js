@@ -19,10 +19,6 @@ let intentionalDisconnect = false;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function log(...args) {
-  console.log('[Speechwave SW]', ...args);
-}
-
 function isConnected() {
   return socket !== null && socket.isConnected();
 }
@@ -89,16 +85,13 @@ function connect(slug, apiKey) {
   // mismatch and stay silent. Without this, heartbeat timeouts on zombie
   // sockets log alarming but harmless "error" and "reconnect" messages.
   const s = new Socket(`${HOST}/socket`, {
-    logger: (kind, msg, data) => {
-      if (socket === s) console.debug(`[Speechwave SW] ${kind}: ${msg}`, data);
-    },
     reconnectAfterMs: () => MAX_TIMEOUT_MS,
     rejoinAfterMs: () => MAX_TIMEOUT_MS,
   });
 
   s.onError(() => {
     if (socket === s) {
-      log('Socket error — scheduling reconnect');
+      console.warn('[Speechwave SW] Socket error — scheduling reconnect');
       socket = null;
       channel = null;
       reconnectFromStorage();
@@ -117,7 +110,7 @@ function connect(slug, apiKey) {
 
   c.join()
     .receive('ok', () => {
-      log(`Joined reactions:${slug}`);
+      console.info(`[Speechwave SW] Joined reactions:${slug}`);
     })
     .receive('error', ({ reason }) => {
       console.error(`[Speechwave SW] Channel join failed: ${reason}`);
