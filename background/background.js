@@ -63,8 +63,8 @@ function connect(slug, apiKey) {
 
   const s = new Socket(`${HOST}/socket`, {
     logger: (kind, msg, data) => console.debug(`[Speechwave SW] ${kind}: ${msg}`, data),
-    reconnectAfterMs: () => null,
-    rejoinAfterMs: () => null,
+    reconnectAfterMs: () => 2147483647,
+    rejoinAfterMs: () => 2147483647,
   });
 
   s.onError(() => {
