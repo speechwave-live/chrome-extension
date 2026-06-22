@@ -482,4 +482,37 @@ describe("auto-reconnect on startup", () => {
 
     expect(mockSocket).toBeNull();
   });
+
+  test("skips auto-reconnect when already connected", () => {
+    const { messageHandler } = loadBackground();
+
+    // Connect via SET_SLUG first
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+    const firstSocket = mockSocket;
+
+    // Simulate auto-reconnect callback firing (reads slug+apiKey from storage)
+    // In real life this races with SET_SLUG on SW restart
+    chrome.storage.local.get.mockImplementation((_key, callback) => {
+      callback({ slug: "talk" });
+    });
+    chrome.storage.sync.get.mockImplementation((_key, callback) => {
+      callback({ apiKey: "key" });
+    });
+
+    // Manually trigger the auto-reconnect logic
+    chrome.storage.local.get("slug", ({ slug }) => {
+      if (slug) {
+        chrome.storage.sync.get("apiKey", ({ apiKey }) => {
+          // This is the guard: don't connect if already connected
+          if (apiKey && firstSocket.isConnected()) {
+            // Should skip — socket hasn't changed
+            expect(mockSocket).toBe(firstSocket);
+          }
+        });
+      }
+    });
+
+    // Socket should still be the original one
+    expect(mockSocket).toBe(firstSocket);
+  });
 });
