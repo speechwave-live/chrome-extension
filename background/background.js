@@ -82,15 +82,23 @@ function connect(slug, apiKey) {
   // Chrome MV3 can re-run module-level code without destroying the old JS
   // context, so Phoenix's internal timers create zombie sockets our code
   // can't reach. We handle reconnection ourselves via reconnectFromStorage().
+  //
+  // The logger and onError callbacks use an identity check (socket === s) to
+  // suppress noise from zombie sockets. After a SW restart, the module-level
+  // `socket` points to the new Socket; the old Socket's callbacks see the
+  // mismatch and stay silent. Without this, heartbeat timeouts on zombie
+  // sockets log alarming but harmless "error" and "reconnect" messages.
   const s = new Socket(`${HOST}/socket`, {
-    logger: (kind, msg, data) => console.debug(`[Speechwave SW] ${kind}: ${msg}`, data),
+    logger: (kind, msg, data) => {
+      if (socket === s) console.debug(`[Speechwave SW] ${kind}: ${msg}`, data);
+    },
     reconnectAfterMs: () => MAX_TIMEOUT_MS,
     rejoinAfterMs: () => MAX_TIMEOUT_MS,
   });
 
   s.onError(() => {
-    log('Socket error — scheduling reconnect');
     if (socket === s) {
+      log('Socket error — scheduling reconnect');
       socket = null;
       channel = null;
       reconnectFromStorage();
