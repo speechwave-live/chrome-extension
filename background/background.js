@@ -118,6 +118,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     connect(msg.slug, msg.apiKey);
     sendResponse({ connected: true }); // optimistic
 
+  } else if (msg.type === 'DISCONNECT') {
+    if (socket) {
+      intentionalDisconnect = true;
+      socket.disconnect();
+      socket = null;
+      channel = null;
+      currentSlide = 0;
+    }
+    chrome.storage.local.remove('slug');
+    sendResponse({ connected: false });
+
   } else if (msg.type === 'GET_STATUS') {
     sendResponse({ connected: isConnected(), slide: currentSlide });
 

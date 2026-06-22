@@ -172,6 +172,44 @@ describe("SET_SLUG", () => {
 });
 
 // ---------------------------------------------------------------------------
+// DISCONNECT
+// ---------------------------------------------------------------------------
+
+describe("DISCONNECT", () => {
+  test("disconnects socket and responds with connected: false", () => {
+    const { messageHandler } = loadBackground();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+
+    const sendResponse = jest.fn();
+    messageHandler({ type: "DISCONNECT" }, {}, sendResponse);
+
+    expect(sendResponse).toHaveBeenCalledWith({ connected: false });
+  });
+
+  test("clears slug from local storage so auto-reconnect does not fire", () => {
+    const { messageHandler } = loadBackground();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+    messageHandler({ type: "DISCONNECT" }, {}, jest.fn());
+
+    expect(chrome.storage.local.remove).toHaveBeenCalledWith("slug");
+  });
+
+  test("GET_STATUS returns not connected after DISCONNECT", () => {
+    const { messageHandler } = loadBackground();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+    messageHandler({ type: "DISCONNECT" }, {}, jest.fn());
+
+    const sendResponse = jest.fn();
+    messageHandler({ type: "GET_STATUS" }, {}, sendResponse);
+
+    expect(sendResponse).toHaveBeenCalledWith({ connected: false, slide: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SLIDE_CHANGED
 // ---------------------------------------------------------------------------
 

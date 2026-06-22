@@ -21,6 +21,7 @@ const cancelSetup = document.getElementById("cancel-setup");
 
 let currentSessionId = null;
 let storedApiKey = null;
+let connected = false;
 
 function setError(msg) {
   if (msg) {
@@ -42,11 +43,12 @@ function showMain() {
   mainSection.style.display = "block";
 }
 
-function setStatus(connected) {
-  dot.className = "dot" + (connected ? " connected" : "");
-  statusText.textContent = connected ? "Connected" : "Disconnected";
-  connectBtn.textContent = connected ? "Disconnect" : "Connect";
-  sessionSection.style.display = connected ? "block" : "none";
+function setStatus(isConnected) {
+  connected = isConnected;
+  dot.className = "dot" + (isConnected ? " connected" : "");
+  statusText.textContent = isConnected ? "Connected" : "Disconnected";
+  connectBtn.textContent = isConnected ? "Disconnect" : "Connect";
+  sessionSection.style.display = isConnected ? "block" : "none";
 }
 
 function setSessionUI(active, label) {
@@ -104,14 +106,23 @@ if (DEV_MODE) {
   });
 }
 
-// --- Connect ---
+// --- Connect / Disconnect ---
 connectBtn.addEventListener("click", () => {
-  const slug = slugInput.value.trim();
-  if (!slug || !storedApiKey) return;
   setError(null);
-  chrome.runtime.sendMessage({ type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
-    setStatus(response?.connected ?? false);
-  });
+  if (connected) {
+    chrome.runtime.sendMessage({ type: "DISCONNECT" }, (response) => {
+      setStatus(false);
+      currentSessionId = null;
+      chrome.storage.local.remove("sessionId");
+      setSessionUI(false);
+    });
+  } else {
+    const slug = slugInput.value.trim();
+    if (!slug || !storedApiKey) return;
+    chrome.runtime.sendMessage({ type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
+      setStatus(response?.connected ?? false);
+    });
+  }
 });
 
 // --- Session ---
