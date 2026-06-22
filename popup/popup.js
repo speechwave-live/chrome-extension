@@ -17,6 +17,7 @@ const slideIndicator = document.getElementById("slide-indicator");
 const fireworksToggle = document.getElementById("fireworks-toggle");
 const testFireworksBtn = document.getElementById("test-fireworks-btn");
 const errorMsg = document.getElementById("error-msg");
+const cancelSetup = document.getElementById("cancel-setup");
 
 let currentSessionId = null;
 let storedApiKey = null;
@@ -61,7 +62,14 @@ function setSlideIndicator(slide) {
 // --- API key setup ---
 document.getElementById("change-api-key-link").addEventListener("click", (e) => {
   e.preventDefault();
+  cancelSetup.style.display = "block";
   showSetup();
+});
+
+cancelSetup.querySelector("a").addEventListener("click", (e) => {
+  e.preventDefault();
+  cancelSetup.style.display = "none";
+  showMain();
 });
 
 saveApiKeyBtn.addEventListener("click", () => {

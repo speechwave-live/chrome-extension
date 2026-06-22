@@ -5,6 +5,7 @@ const POPUP_HTML = `
   <div id="setup-section" style="display:none">
     <input id="api-key-input" type="text" />
     <button id="save-api-key-btn">Save Key</button>
+    <div id="cancel-setup" style="display:none"><a href="#">Cancel</a></div>
   </div>
   <div id="main-section" style="display:none">
     <div id="dot"></div>
