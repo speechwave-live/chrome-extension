@@ -5,6 +5,7 @@ const { Socket } = Phoenix;
 
 const DEV_MODE = false; // set to true locally for testing
 const HOST = DEV_MODE ? "ws://localhost:4000" : "wss://speechwave.live";
+const MAX_TIMEOUT_MS = 2147483647; // max 32-bit signed int — largest value setTimeout accepts
 
 // --- State ---
 let socket = null;
@@ -63,8 +64,8 @@ function connect(slug, apiKey) {
 
   const s = new Socket(`${HOST}/socket`, {
     logger: (kind, msg, data) => console.debug(`[Speechwave SW] ${kind}: ${msg}`, data),
-    reconnectAfterMs: () => 2147483647,
-    rejoinAfterMs: () => 2147483647,
+    reconnectAfterMs: () => MAX_TIMEOUT_MS,
+    rejoinAfterMs: () => MAX_TIMEOUT_MS,
   });
 
   s.onError(() => {
