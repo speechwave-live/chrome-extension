@@ -6,6 +6,9 @@ const { Socket } = Phoenix;
 const DEV_MODE = false; // set to true locally for testing
 const HOST = DEV_MODE ? "ws://localhost:4000" : "wss://speechwave.live";
 
+// setTimeout caps its delay at 2^31-1 ms. Infinity/null coerce to 0 (immediate).
+const MAX_TIMEOUT_MS = 2147483647;
+
 // --- State ---
 let socket = null;
 let channel = null;
@@ -47,6 +50,20 @@ function notifyPopup(msg) {
   });
 }
 
+/**
+ * Read slug + apiKey from storage and call connect() if both are present
+ * and no connection is currently active.
+ */
+function reconnectFromStorage() {
+  chrome.storage.local.get('slug', ({ slug }) => {
+    if (slug) {
+      chrome.storage.sync.get('apiKey', ({ apiKey }) => {
+        if (apiKey && !isConnected()) connect(slug, apiKey);
+      });
+    }
+  });
+}
+
 // ---------------------------------------------------------------------------
 // connect()
 // ---------------------------------------------------------------------------
@@ -61,12 +78,23 @@ function connect(slug, apiKey) {
     currentSlide = 0;
   }
 
+  // Phoenix Socket's built-in reconnect and channel rejoin are disabled.
+  // Chrome MV3 can re-run module-level code without destroying the old JS
+  // context, so Phoenix's internal timers create zombie sockets our code
+  // can't reach. We handle reconnection ourselves via reconnectFromStorage().
   const s = new Socket(`${HOST}/socket`, {
     logger: (kind, msg, data) => console.debug(`[Speechwave SW] ${kind}: ${msg}`, data),
+    reconnectAfterMs: () => MAX_TIMEOUT_MS,
+    rejoinAfterMs: () => MAX_TIMEOUT_MS,
   });
 
   s.onError(() => {
-    console.error('[Speechwave SW] Socket error — check HOST and that the server is running');
+    log('Socket error — scheduling reconnect');
+    if (socket === s) {
+      socket = null;
+      channel = null;
+      reconnectFromStorage();
+    }
   });
 
   s.connect();
@@ -176,10 +204,4 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 // Auto-reconnect on service worker startup / restart
 // ---------------------------------------------------------------------------
 
-chrome.storage.local.get('slug', ({ slug }) => {
-  if (slug) {
-    chrome.storage.sync.get('apiKey', ({ apiKey }) => {
-      if (apiKey && !isConnected()) connect(slug, apiKey);
-    });
-  }
-});
+reconnectFromStorage();
