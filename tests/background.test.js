@@ -401,6 +401,24 @@ describe("stale connection handlers", () => {
     messageHandler({ type: "GET_STATUS" }, {}, statusAfter);
     expect(statusAfter).toHaveBeenCalledWith({ connected: true, slide: 0 });
   });
+
+  test("stale join error does not send CONNECT_ERROR to popup", () => {
+    const { messageHandler } = loadBackground();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "old-key" }, {}, jest.fn());
+    const staleChannel = mockChannel;
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "new-key" }, {}, jest.fn());
+
+    chrome.runtime.sendMessage.mockClear();
+
+    staleChannel.joinReceiveHandlers["error"]({ reason: "unauthorized" });
+
+    const connectErrorCall = chrome.runtime.sendMessage.mock.calls.find(
+      ([msg]) => msg.type === "CONNECT_ERROR"
+    );
+    expect(connectErrorCall).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------

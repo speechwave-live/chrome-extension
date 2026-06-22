@@ -86,9 +86,11 @@ function connect(slug, apiKey) {
     .receive('error', ({ reason }) => {
       console.error(`[Speechwave SW] Channel join failed: ${reason}`);
       s.disconnect();
-      if (socket === s) socket = null;
-      if (channel === c) channel = null;
-      notifyPopup({ type: 'CONNECT_ERROR', reason });
+      if (socket === s) {
+        socket = null;
+        channel = null;
+        notifyPopup({ type: 'CONNECT_ERROR', reason });
+      }
     });
 
   c.onClose(() => {
@@ -97,9 +99,11 @@ function connect(slug, apiKey) {
       return;
     }
     s.disconnect();
-    if (socket === s) socket = null;
-    if (channel === c) channel = null;
-    notifyPopup({ type: 'CONNECT_ERROR', reason: 'key_updated' });
+    if (socket === s) {
+      socket = null;
+      channel = null;
+      notifyPopup({ type: 'CONNECT_ERROR', reason: 'key_updated' });
+    }
   });
 }
 
