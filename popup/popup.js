@@ -135,6 +135,15 @@ connectBtn.addEventListener("click", () => {
     if (!slug || !storedApiKey) return;
     chrome.runtime.sendMessage({ type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
       setStatus(response?.connected ?? false);
+      if (response?.error) {
+        const messages = {
+          not_found: "Talk not found",
+          unauthorized: "Invalid API key or you don't own this talk",
+          capacity_reached: "Talk is at capacity",
+          email_not_confirmed: "Please confirm your email before using the extension",
+        };
+        setError(messages[response.error] || "Connection failed");
+      }
     });
   }
 });

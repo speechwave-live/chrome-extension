@@ -69,7 +69,7 @@ function reconnectFromStorage() {
 // connect()
 // ---------------------------------------------------------------------------
 
-function connect(slug, apiKey) {
+function connect(slug, apiKey, onResult) {
   // Tear down any existing connection first
   if (socket) {
     intentionalDisconnect = true;
@@ -119,6 +119,7 @@ function connect(slug, apiKey) {
   c.join()
     .receive('ok', () => {
       console.info(`[Speechwave SW] Joined reactions:${slug}`);
+      if (onResult) onResult({ connected: true });
     })
     .receive('error', ({ reason }) => {
       console.error(`[Speechwave SW] Channel join failed: ${reason}`);
@@ -126,7 +127,11 @@ function connect(slug, apiKey) {
       if (socket === s) {
         socket = null;
         channel = null;
-        notifyPopup({ type: 'CONNECT_ERROR', reason });
+        if (onResult) {
+          onResult({ connected: false, error: reason });
+        } else {
+          notifyPopup({ type: 'CONNECT_ERROR', reason });
+        }
       }
     });
 
@@ -152,8 +157,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'SET_SLUG') {
     // Persist the slug so we can reconnect after service worker restart
     chrome.storage.local.set({ slug: msg.slug });
-    connect(msg.slug, msg.apiKey);
-    sendResponse({ connected: true }); // optimistic
+    connect(msg.slug, msg.apiKey, sendResponse);
+    return true; // keep message channel open for async join result
 
   } else if (msg.type === 'DISCONNECT') {
     if (socket) {

@@ -144,13 +144,27 @@ describe("SET_SLUG", () => {
     expect(chrome.storage.local.set).toHaveBeenCalledWith({ slug: "my-talk" });
   });
 
-  test("responds optimistically with connected: true", () => {
+  test("responds with connected: true after channel join succeeds", () => {
     const { messageHandler } = loadBackground();
     const sendResponse = jest.fn();
 
     messageHandler({ type: "SET_SLUG", slug: "my-talk", apiKey: "key" }, {}, sendResponse);
 
+    // Simulate server confirming the join
+    mockChannel.joinReceiveHandlers["ok"]({});
+
     expect(sendResponse).toHaveBeenCalledWith({ connected: true });
+  });
+
+  test("responds with error when channel join fails", () => {
+    const { messageHandler } = loadBackground();
+    const sendResponse = jest.fn();
+
+    messageHandler({ type: "SET_SLUG", slug: "bad-slug", apiKey: "key" }, {}, sendResponse);
+
+    mockChannel.joinReceiveHandlers["error"]({ reason: "not_found" });
+
+    expect(sendResponse).toHaveBeenCalledWith({ connected: false, error: "not_found" });
   });
 
   test("creates a Phoenix socket and connects", () => {
