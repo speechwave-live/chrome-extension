@@ -17,9 +17,12 @@ const slideIndicator = document.getElementById("slide-indicator");
 const fireworksToggle = document.getElementById("fireworks-toggle");
 const testFireworksBtn = document.getElementById("test-fireworks-btn");
 const errorMsg = document.getElementById("error-msg");
+const cancelSetup = document.getElementById("cancel-setup");
+const debugToggle = document.getElementById("debug-toggle");
 
 let currentSessionId = null;
 let storedApiKey = null;
+let connected = false;
 
 function setError(msg) {
   if (msg) {
@@ -41,11 +44,12 @@ function showMain() {
   mainSection.style.display = "block";
 }
 
-function setStatus(connected) {
-  dot.className = "dot" + (connected ? " connected" : "");
-  statusText.textContent = connected ? "Connected" : "Disconnected";
-  connectBtn.textContent = connected ? "Disconnect" : "Connect";
-  sessionSection.style.display = connected ? "block" : "none";
+function setStatus(isConnected) {
+  connected = isConnected;
+  dot.className = "dot" + (isConnected ? " connected" : "");
+  statusText.textContent = isConnected ? "Connected" : "Disconnected";
+  connectBtn.textContent = isConnected ? "Disconnect" : "Connect";
+  sessionSection.style.display = isConnected ? "block" : "none";
 }
 
 function setSessionUI(active, label) {
@@ -59,9 +63,29 @@ function setSlideIndicator(slide) {
 }
 
 // --- API key setup ---
+document.getElementById("change-api-key-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  cancelSetup.style.display = "block";
+  showSetup();
+});
+
+cancelSetup.querySelector("a").addEventListener("click", (e) => {
+  e.preventDefault();
+  cancelSetup.style.display = "none";
+  showMain();
+});
+
+const setupError = document.getElementById("setup-error");
+
 saveApiKeyBtn.addEventListener("click", () => {
   const key = apiKeyInput.value.trim();
   if (!key) return;
+  if (!/^[0-9a-f]{64}$/i.test(key)) {
+    setupError.textContent = "Invalid key format. Keys are 64-character hex strings.";
+    setupError.style.display = "block";
+    return;
+  }
+  setupError.style.display = "none";
   chrome.storage.sync.set({ apiKey: key }, () => {
     storedApiKey = key;
     showMain();
@@ -77,65 +101,87 @@ chrome.storage.sync.get({ fireworksEnabled: true }, ({ fireworksEnabled }) => {
 fireworksToggle.addEventListener("change", () => {
   const enabled = fireworksToggle.checked;
   chrome.storage.sync.set({ fireworksEnabled: enabled });
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    chrome.tabs.sendMessage(tab.id, { type: "SET_FIREWORKS", enabled }, () => {
-      void chrome.runtime.lastError;
-    });
+  chrome.runtime.sendMessage({ type: "SET_FIREWORKS", enabled }, () => {
+    void chrome.runtime.lastError;
+  });
+});
+
+// --- Debug logging ---
+chrome.storage.local.get({ debugEnabled: false }, ({ debugEnabled }) => {
+  debugToggle.checked = debugEnabled;
+});
+
+debugToggle.addEventListener("change", () => {
+  const enabled = debugToggle.checked;
+  chrome.storage.local.set({ debugEnabled: enabled });
+  chrome.runtime.sendMessage({ type: "SET_DEBUG", enabled }, () => {
+    void chrome.runtime.lastError;
   });
 });
 
 if (DEV_MODE) {
   testFireworksBtn.style.display = "block";
   testFireworksBtn.addEventListener("click", () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      chrome.tabs.sendMessage(tab.id, { type: "TEST_FIREWORKS" }, () => {
-        void chrome.runtime.lastError;
-      });
+    chrome.runtime.sendMessage({ type: "TEST_FIREWORKS" }, () => {
+      void chrome.runtime.lastError;
     });
   });
 }
 
-// --- Connect ---
+// --- Connect / Disconnect ---
 connectBtn.addEventListener("click", () => {
-  const slug = slugInput.value.trim();
-  if (!slug || !storedApiKey) return;
   setError(null);
-  chrome.storage.local.set({ slug });
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    chrome.tabs.sendMessage(tab.id, { type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
-      setStatus(response?.connected ?? false);
+  if (connected) {
+    chrome.runtime.sendMessage({ type: "DISCONNECT" }, (response) => {
+      setStatus(false);
+      currentSessionId = null;
+      chrome.storage.local.remove("sessionId");
+      setSessionUI(false);
     });
-  });
+  } else {
+    const slug = slugInput.value.trim();
+    if (!slug || !storedApiKey) return;
+    chrome.runtime.sendMessage({ type: "SET_SLUG", slug, apiKey: storedApiKey }, (response) => {
+      setStatus(response?.connected ?? false);
+      if (response?.error) {
+        const messages = {
+          not_found: "Talk not found",
+          unauthorized: "Invalid API key or you don't own this talk",
+          capacity_reached: "Talk is at capacity",
+          email_not_confirmed: "Please confirm your email before using the extension",
+        };
+        setError(messages[response.error] || "Connection failed");
+      }
+    });
+  }
 });
 
 // --- Session ---
 sessionBtn.addEventListener("click", () => {
   setError(null);
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    if (currentSessionId) {
-      chrome.tabs.sendMessage(tab.id, { type: "STOP_SESSION", sessionId: currentSessionId }, (response) => {
-        if (response?.stopped) {
-          currentSessionId = null;
-          chrome.storage.local.remove("sessionId");
-          setSessionUI(false);
-        }
-      });
-    } else {
-      chrome.tabs.sendMessage(tab.id, { type: "START_SESSION" }, (response) => {
-        if (response?.session_id) {
-          currentSessionId = response.session_id;
-          chrome.storage.local.set({ sessionId: response.session_id });
-          setSessionUI(true, response.label);
-        } else if (response?.error) {
-          const messages = {
-            session_limit_reached: "Monthly session limit reached",
-            not_connected: "Not connected to a talk",
-          };
-          setError(messages[response.error] || "Could not start session");
-        }
-      });
-    }
-  });
+  if (currentSessionId) {
+    chrome.runtime.sendMessage({ type: "STOP_SESSION", sessionId: currentSessionId }, (response) => {
+      if (response?.stopped) {
+        currentSessionId = null;
+        chrome.storage.local.remove("sessionId");
+        setSessionUI(false);
+      }
+    });
+  } else {
+    chrome.runtime.sendMessage({ type: "START_SESSION" }, (response) => {
+      if (response?.session_id) {
+        currentSessionId = response.session_id;
+        chrome.storage.local.set({ sessionId: response.session_id });
+        setSessionUI(true, response.label);
+      } else if (response?.error) {
+        const messages = {
+          session_limit_reached: "Monthly session limit reached",
+          not_connected: "Not connected to a talk",
+        };
+        setError(messages[response.error] || "Could not start session");
+      }
+    });
+  }
 });
 
 // --- Init ---
@@ -152,11 +198,9 @@ chrome.storage.sync.get(["apiKey"], ({ apiKey }) => {
       }
     });
 
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      chrome.tabs.sendMessage(tab.id, { type: "GET_STATUS" }, (response) => {
-        setStatus(response?.connected ?? false);
-        setSlideIndicator(response?.slide ?? 0);
-      });
+    chrome.runtime.sendMessage({ type: "GET_STATUS" }, (response) => {
+      setStatus(response?.connected ?? false);
+      setSlideIndicator(response?.slide ?? 0);
     });
   } else {
     showSetup();

@@ -6,7 +6,7 @@
     body { font-family: sans-serif; width: 240px; padding: 16px; margin: 0; }
     h3 { margin: 0 0 12px; }
     label { font-size: 12px; font-weight: 600; color: #5f6368; }
-    input { width: 100%; box-sizing: border-box; padding: 6px; margin: 4px 0 12px;
+    input:not([type="checkbox"]) { width: 100%; box-sizing: border-box; padding: 6px; margin: 4px 0 12px;
             border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
     button { width: 100%; padding: 8px; background: #4285f4; color: white;
              border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
@@ -30,10 +30,14 @@
   <!-- API key setup screen — shown when no key is stored -->
   <div id="setup-section" style="display:none">
     <p class="setup-msg">Paste your Speechwave API key to get started.<br>
-      Find it in <a href="https://speechwave.fly.dev/users/settings" target="_blank">Account Settings</a>.
+      Find it in <a href="https://speechwave.live/users/settings" target="_blank">Account Settings</a>.
     </p>
     <input id="api-key-input" type="text" placeholder="Your API key" class="api-key-input" />
+    <div id="setup-error" style="display:none; color:#ea4335; font-size:11px; margin-bottom:8px;"></div>
     <button id="save-api-key-btn" class="primary">Save Key</button>
+    <div id="cancel-setup" style="display:none; margin-top: 8px; text-align: center;">
+      <a href="#" style="font-size: 11px; color: #5f6368; text-decoration: underline;">Cancel</a>
+    </div>
   </div>
 
   <!-- Main UI — shown once api key is saved -->
@@ -50,12 +54,22 @@
       <button id="session-btn">Start Session</button>
     </div>
 
-    <div id="fireworks-section" style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px;">
-      <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0;">
-        <input type="checkbox" id="fireworks-toggle">
-        <span style="font-size: 12px; font-weight: 600; color: #5f6368;">Fireworks animations</span>
+    <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+      <label style="display: flex; align-items: flex-start; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="fireworks-toggle" style="margin-top: 1px;">
+        <span style="font-size: 11px; color: #5f6368;">Fireworks animations</span>
       </label>
-      <button id="test-fireworks-btn" style="display: none; margin-top: 8px; background: #f9ab00;">Test Fireworks</button>
+      <button id="test-fireworks-btn" style="display: none; margin-left: 20px; background: #f9ab00;">Test Fireworks</button>
+      <label style="display: flex; align-items: flex-start; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="debug-toggle" style="margin-top: 1px;">
+        <span style="font-size: 11px; color: #5f6368;">Debug logging<br>
+          <span style="font-size: 10px; color: #9aa0a6; font-weight: normal;">Logs to service worker console</span>
+        </span>
+      </label>
+    </div>
+
+    <div style="margin-top: 12px; text-align: center;">
+      <a id="change-api-key-link" href="#" style="font-size: 11px; color: #5f6368; text-decoration: underline;">Change API key</a>
     </div>
   </div>
 
