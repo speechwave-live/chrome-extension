@@ -25,7 +25,7 @@ function isConnected() {
 }
 
 function debug(...args) {
-  if (debugEnabled) console.debug('[Speechwave SW]', ...args);
+  if (debugEnabled) console.log('[Speechwave SW]', ...args);
 }
 
 /**
@@ -90,9 +90,7 @@ function connect(slug, apiKey) {
   // mismatch and stay silent. Without this, heartbeat timeouts on zombie
   // sockets log alarming but harmless "error" and "reconnect" messages.
   const s = new Socket(`${HOST}/socket`, {
-    logger: debugEnabled
-      ? (kind, msg, data) => { if (socket === s) debug(kind, msg, data); }
-      : undefined,
+    logger: (kind, msg, data) => { if (socket === s) debug(kind, msg, data); },
     reconnectAfterMs: () => MAX_TIMEOUT_MS,
     rejoinAfterMs: () => MAX_TIMEOUT_MS,
   });
