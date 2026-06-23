@@ -4,6 +4,7 @@ const path = require("path");
 const POPUP_HTML = `
   <div id="setup-section" style="display:none">
     <input id="api-key-input" type="text" />
+    <div id="setup-error" style="display:none"></div>
     <button id="save-api-key-btn">Save Key</button>
     <div id="cancel-setup" style="display:none"><a href="#">Cancel</a></div>
   </div>
@@ -92,9 +93,11 @@ describe("initialization", () => {
 });
 
 describe("saving API key", () => {
+  const VALID_KEY = "a".repeat(64);
+
   test("saves key to sync storage and transitions to main section", () => {
     loadPopup({ apiKey: null });
-    document.getElementById("api-key-input").value = "new-api-key";
+    document.getElementById("api-key-input").value = VALID_KEY;
 
     chrome.storage.sync.set.mockImplementation((_data, callback) => {
       callback();
@@ -103,7 +106,7 @@ describe("saving API key", () => {
     document.getElementById("save-api-key-btn").click();
 
     expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-      { apiKey: "new-api-key" },
+      { apiKey: VALID_KEY },
       expect.any(Function)
     );
     expect(document.getElementById("main-section").style.display).toBe(
@@ -122,6 +125,15 @@ describe("saving API key", () => {
       expect.objectContaining({ apiKey: expect.anything() }),
       expect.any(Function)
     );
+  });
+
+  test("rejects keys that are not 64-char hex strings", () => {
+    loadPopup({ apiKey: null });
+    document.getElementById("api-key-input").value = "not-a-valid-key";
+    document.getElementById("save-api-key-btn").click();
+
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+    expect(document.getElementById("setup-error").style.display).toBe("block");
   });
 });
 

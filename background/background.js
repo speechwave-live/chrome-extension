@@ -122,7 +122,7 @@ function connect(slug, apiKey, onResult) {
       if (onResult) onResult({ connected: true });
     })
     .receive('error', ({ reason }) => {
-      console.error(`[Speechwave SW] Channel join failed: ${reason}`);
+      console.warn(`[Speechwave SW] Channel join failed: ${reason}`);
       s.disconnect();
       if (socket === s) {
         socket = null;

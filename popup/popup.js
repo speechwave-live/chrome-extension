@@ -75,9 +75,17 @@ cancelSetup.querySelector("a").addEventListener("click", (e) => {
   showMain();
 });
 
+const setupError = document.getElementById("setup-error");
+
 saveApiKeyBtn.addEventListener("click", () => {
   const key = apiKeyInput.value.trim();
   if (!key) return;
+  if (!/^[0-9a-f]{64}$/i.test(key)) {
+    setupError.textContent = "Invalid key format. Keys are 64-character hex strings.";
+    setupError.style.display = "block";
+    return;
+  }
+  setupError.style.display = "none";
   chrome.storage.sync.set({ apiKey: key }, () => {
     storedApiKey = key;
     showMain();
