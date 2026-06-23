@@ -18,6 +18,7 @@ const fireworksToggle = document.getElementById("fireworks-toggle");
 const testFireworksBtn = document.getElementById("test-fireworks-btn");
 const errorMsg = document.getElementById("error-msg");
 const cancelSetup = document.getElementById("cancel-setup");
+const debugToggle = document.getElementById("debug-toggle");
 
 let currentSessionId = null;
 let storedApiKey = null;
@@ -93,6 +94,19 @@ fireworksToggle.addEventListener("change", () => {
   const enabled = fireworksToggle.checked;
   chrome.storage.sync.set({ fireworksEnabled: enabled });
   chrome.runtime.sendMessage({ type: "SET_FIREWORKS", enabled }, () => {
+    void chrome.runtime.lastError;
+  });
+});
+
+// --- Debug logging ---
+chrome.storage.local.get({ debugEnabled: false }, ({ debugEnabled }) => {
+  debugToggle.checked = debugEnabled;
+});
+
+debugToggle.addEventListener("change", () => {
+  const enabled = debugToggle.checked;
+  chrome.storage.local.set({ debugEnabled: enabled });
+  chrome.runtime.sendMessage({ type: "SET_DEBUG", enabled }, () => {
     void chrome.runtime.lastError;
   });
 });

@@ -14,6 +14,7 @@ let socket = null;
 let channel = null;
 let currentSlide = 0;
 let intentionalDisconnect = false;
+let debugEnabled = false;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,6 +22,10 @@ let intentionalDisconnect = false;
 
 function isConnected() {
   return socket !== null && socket.isConnected();
+}
+
+function debug(...args) {
+  if (debugEnabled) console.debug('[Speechwave SW]', ...args);
 }
 
 /**
@@ -85,6 +90,9 @@ function connect(slug, apiKey) {
   // mismatch and stay silent. Without this, heartbeat timeouts on zombie
   // sockets log alarming but harmless "error" and "reconnect" messages.
   const s = new Socket(`${HOST}/socket`, {
+    logger: debugEnabled
+      ? (kind, msg, data) => { if (socket === s) debug(kind, msg, data); }
+      : undefined,
     reconnectAfterMs: () => MAX_TIMEOUT_MS,
     rejoinAfterMs: () => MAX_TIMEOUT_MS,
   });
@@ -99,12 +107,14 @@ function connect(slug, apiKey) {
   });
 
   s.connect();
+  debug('connect()', slug);
 
   const c = s.channel(`reactions:${slug}`, { api_key: apiKey });
   socket = s;
   channel = c;
 
   c.on('new_reaction', ({ emoji }) => {
+    debug('new_reaction', emoji);
     broadcastToSlidesTabs({ type: 'RENDER_EMOJI', emoji });
   });
 
@@ -198,11 +208,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   } else if (msg.type === 'TEST_FIREWORKS') {
     broadcastToSlidesTabs({ type: 'TEST_FIREWORKS' });
     // no sendResponse needed
+
+  } else if (msg.type === 'SET_DEBUG') {
+    debugEnabled = msg.enabled;
+    debug('Debug logging', debugEnabled ? 'enabled' : 'disabled');
   }
 });
 
 // ---------------------------------------------------------------------------
-// Auto-reconnect on service worker startup / restart
+// Startup: read debug flag, then auto-reconnect
 // ---------------------------------------------------------------------------
+
+chrome.storage.local.get({ debugEnabled: false }, ({ debugEnabled: val }) => {
+  debugEnabled = val;
+  if (debugEnabled) debug('Service worker started, debug logging active');
+});
 
 reconnectFromStorage();

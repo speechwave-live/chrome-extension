@@ -20,6 +20,7 @@ const POPUP_HTML = `
     </div>
     <input type="checkbox" id="fireworks-toggle" />
     <button id="test-fireworks-btn" style="display:none">Test</button>
+    <input type="checkbox" id="debug-toggle" />
     <a id="change-api-key-link" href="#">Change API key</a>
   </div>
 `;
