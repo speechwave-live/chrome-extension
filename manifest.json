@@ -5,7 +5,6 @@
   "description": "Live emoji reactions overlay for conference talks",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
-    "http://localhost/*",
     "https://speechwave.live/*"
   ],
   "background": {
