@@ -126,6 +126,7 @@ if (DEV_MODE) {
       void chrome.runtime.lastError;
     });
   });
+  document.getElementById("debug-toggle-label").style.display = "flex";
 }
 
 // --- Connect / Disconnect ---

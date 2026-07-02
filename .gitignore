@@ -24,6 +24,7 @@
 *.tsbuildinfo
 node_modules/
 dist/
+*.zip
 
 # Ignore local Claude AI settings
 /.claude/settings.local.json
