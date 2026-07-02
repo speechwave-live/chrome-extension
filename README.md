@@ -51,6 +51,12 @@ Message flow:
 3. Click **Load unpacked** -> select this repo's root directory
 4. The Speechwave icon appears in the toolbar
 
+> **Local server testing:** `manifest.json` only includes `https://speechwave.live/*` as a
+> host permission — the localhost entry was removed before Web Store submission to avoid
+> requesting unused permissions. To connect to a local server, temporarily add
+> `"http://localhost/*"` to `host_permissions` in `manifest.json` (and reload the extension)
+> while `DEV_MODE = true` in `background.js`. Do not commit this change.
+
 ## Connect to a talk
 
 1. Click the Speechwave extension icon (works from **any tab**)
