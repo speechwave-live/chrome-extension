@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$SCRIPT_DIR/.."
+
+# Disable DEV_MODE in JS source files
+sed -i '' 's/^const DEV_MODE = true;/const DEV_MODE = false;/' \
+  "$ROOT/background/background.js" \
+  "$ROOT/popup/popup.js"
+
+# Remove localhost from host_permissions in manifest.json
+sed -i '' '/localhost/d' "$ROOT/manifest.json"
+# Clean up trailing comma left on the speechwave.live line if present
+sed -i '' 's|"https://speechwave.live/\*",|"https://speechwave.live/*"|' \
+  "$ROOT/manifest.json"
+
+echo "Dev mode OFF — DEV_MODE=false, localhost:4000 removed from host_permissions"

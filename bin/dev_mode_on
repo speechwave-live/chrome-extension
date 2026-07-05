@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$SCRIPT_DIR/.."
+
+# Enable DEV_MODE in JS source files
+sed -i '' 's/^const DEV_MODE = false;/const DEV_MODE = true;/' \
+  "$ROOT/background/background.js" \
+  "$ROOT/popup/popup.js"
+
+# Add localhost to host_permissions in manifest.json if not already present
+if ! grep -q "localhost" "$ROOT/manifest.json"; then
+  sed -i '' 's|"https://speechwave.live/\*"|"https://speechwave.live/*",\n    "http://localhost:4000/*"|' \
+    "$ROOT/manifest.json"
+fi
+
+echo "Dev mode ON — DEV_MODE=true, localhost:4000 added to host_permissions"

@@ -51,11 +51,9 @@ Message flow:
 3. Click **Load unpacked** -> select this repo's root directory
 4. The Speechwave icon appears in the toolbar
 
-> **Local server testing:** `manifest.json` only includes `https://speechwave.live/*` as a
-> host permission — the localhost entry was removed before Web Store submission to avoid
-> requesting unused permissions. To connect to a local server, temporarily add
-> `"http://localhost/*"` to `host_permissions` in `manifest.json` (and reload the extension)
-> while `DEV_MODE = true` in `background.js`. Do not commit this change.
+> **Local server testing:** Run `bin/dev_mode_on` to set `DEV_MODE = true` in both JS
+> files and add `http://localhost:4000/*` to `host_permissions`, then reload the extension.
+> Run `bin/dev_mode_off` to revert both changes before committing.
 
 ## Connect to a talk
 
@@ -85,15 +83,20 @@ via `tests/setup/chrome-mock.js`.
 
 ## Development flags
 
-The extension has two `DEV_MODE` flags in separate files. **Both must be set
-to `true` for full local development and reset to `false` before committing.**
+The extension has two `DEV_MODE` flags in separate files. Use the helper scripts
+to toggle both at once — **never commit with `DEV_MODE = true`.**
+
+```bash
+bin/dev_mode_on    # DEV_MODE=true in both JS files + adds localhost:4000 to host_permissions
+bin/dev_mode_off   # DEV_MODE=false in both JS files + removes localhost from host_permissions
+```
 
 | File | Controls | `true` | `false` |
 |------|----------|--------|---------|
 | `background/background.js` | WebSocket host | `ws://localhost:4000` | `wss://speechwave.live` |
 | `popup/popup.js` | Test Fireworks button | Shown in popup | Hidden |
 
-After changing either flag:
+After running either script:
 1. Reload the extension in `chrome://extensions` (click the refresh icon)
 2. **Reload any open Google Slides tabs** -- Chrome does not reinject content
    scripts when an extension is reloaded
@@ -153,11 +156,11 @@ than CSS `@keyframes`) because each element needs a unique computed
 2 seconds in case `finish` events fail to fire (e.g., when the overlay is
 re-parented during a fullscreen transition).
 
-**Testing fireworks in production** -- Set `DEV_MODE = true` in `popup/popup.js`
-to reveal the "Test Fireworks" button. This sends `TEST_FIREWORKS` to the
-service worker, which broadcasts it to all Slides tabs. The content script
-picks a random emoji and fires a burst. Remember to set it back to `false`
-before committing.
+**Testing fireworks in production** -- Run `bin/dev_mode_on` to reveal the
+"Test Fireworks" button in the popup (controlled by `DEV_MODE` in `popup/popup.js`).
+This sends `TEST_FIREWORKS` to the service worker, which broadcasts it to all
+Slides tabs. The content script picks a random emoji and fires a burst. Run
+`bin/dev_mode_off` before committing.
 
 > **Note:** Slide number tracking requires the slideshow to be running. The
 > popup shows "Slide --" in the editor view because the slide indicator
@@ -273,6 +276,8 @@ errors from the old key's auto-reconnect attempt.
 | `adapters/index.js` | Adapter registry (returns adapter for current URL) |
 | `adapters/google_slides.js` | Reads current slide number from Google Slides DOM |
 | `icons/` | Extension icons (16, 48, 128px PNG + SVG source) |
+| `bin/dev_mode_on` | Enable dev mode: `DEV_MODE=true` + localhost host permission |
+| `bin/dev_mode_off` | Disable dev mode: `DEV_MODE=false` + remove localhost host permission |
 | `tests/` | Jest tests for popup, content, background, fireworks, adapters |
 | `tests/setup/` | Chrome API mocks for test environment |
 | `tests/fixtures/` | DOM snapshots for adapter tests |
