@@ -1,0 +1,3 @@
+[tasks.test]
+description = "Run the Jest suite"
+run = "npm test"
