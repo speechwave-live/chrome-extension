@@ -14,7 +14,6 @@ const sessionSection = document.getElementById("session-section");
 const sessionStatus = document.getElementById("session-status");
 const sessionBtn = document.getElementById("session-btn");
 const slideIndicator = document.getElementById("slide-indicator");
-const fireworksToggle = document.getElementById("fireworks-toggle");
 const testFireworksBtn = document.getElementById("test-fireworks-btn");
 const errorMsg = document.getElementById("error-msg");
 const cancelSetup = document.getElementById("cancel-setup");
@@ -90,19 +89,6 @@ saveApiKeyBtn.addEventListener("click", () => {
     storedApiKey = key;
     showMain();
     setError(null);
-  });
-});
-
-// --- Fireworks ---
-chrome.storage.sync.get({ fireworksEnabled: true }, ({ fireworksEnabled }) => {
-  fireworksToggle.checked = fireworksEnabled;
-});
-
-fireworksToggle.addEventListener("change", () => {
-  const enabled = fireworksToggle.checked;
-  chrome.storage.sync.set({ fireworksEnabled: enabled });
-  chrome.runtime.sendMessage({ type: "SET_FIREWORKS", enabled }, () => {
-    void chrome.runtime.lastError;
   });
 });
 

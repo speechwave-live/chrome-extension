@@ -19,7 +19,6 @@ const POPUP_HTML = `
       <div id="session-status">No active session</div>
       <button id="session-btn">Start Session</button>
     </div>
-    <input type="checkbox" id="fireworks-toggle" />
     <button id="test-fireworks-btn" style="display:none">Test</button>
     <label id="debug-toggle-label" style="display:none">
       <input type="checkbox" id="debug-toggle" />
@@ -50,8 +49,7 @@ function loadPopup({ apiKey = null, localData = {}, devMode = false } = {}) {
     if (Array.isArray(keys)) {
       callback(apiKey ? { apiKey } : {});
     } else {
-      // { fireworksEnabled: true } call for fireworks toggle
-      callback({ fireworksEnabled: true });
+      callback({});
     }
   });
 
