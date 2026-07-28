@@ -276,50 +276,84 @@ describe("SLIDE_CHANGED", () => {
 });
 
 // ---------------------------------------------------------------------------
-// SET_FIREWORKS
+// Remote config: capture on join, broadcast, and GET_REMOTE_CONFIG
 // ---------------------------------------------------------------------------
 
-describe("SET_FIREWORKS", () => {
-  test("queries Google Slides tabs and broadcasts to each", () => {
+describe("remote config from channel join", () => {
+  test("broadcasts SET_REMOTE_CONFIG to Slides tabs when join succeeds with settings/tuning", () => {
     const { messageHandler } = loadBackground();
 
     chrome.tabs.query.mockImplementation((_query, callback) => {
-      callback([{ id: 1 }, { id: 2 }]);
+      callback([{ id: 5 }]);
     });
 
-    messageHandler({ type: "SET_FIREWORKS", enabled: true }, {}, jest.fn());
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
 
-    expect(chrome.tabs.query).toHaveBeenCalledWith(
-      { url: "https://docs.google.com/presentation/*" },
-      expect.any(Function)
-    );
-    expect(chrome.tabs.sendMessage).toHaveBeenCalledTimes(2);
+    const payload = {
+      settings: { overlay_size_percent: 35, fireworks_enabled: false },
+      tuning: { min_overlay_size_percent: 10 },
+    };
+    mockChannel.joinReceiveHandlers["ok"](payload);
+
     expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
-      1,
-      { type: "SET_FIREWORKS", enabled: true },
-      expect.any(Function)
-    );
-    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
-      2,
-      { type: "SET_FIREWORKS", enabled: true },
+      5,
+      { type: "SET_REMOTE_CONFIG", settings: payload.settings, tuning: payload.tuning },
       expect.any(Function)
     );
   });
 
-  test("broadcasts enabled: false to Slides tabs", () => {
+  test("does not broadcast SET_REMOTE_CONFIG when the join payload has no settings/tuning", () => {
     const { messageHandler } = loadBackground();
 
     chrome.tabs.query.mockImplementation((_query, callback) => {
-      callback([{ id: 7 }]);
+      callback([{ id: 5 }]);
     });
 
-    messageHandler({ type: "SET_FIREWORKS", enabled: false }, {}, jest.fn());
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+    mockChannel.joinReceiveHandlers["ok"]({});
 
-    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
-      7,
-      { type: "SET_FIREWORKS", enabled: false },
-      expect.any(Function)
-    );
+    expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+
+  test("still resolves onResult with connected: true when join payload has no settings/tuning", () => {
+    const { messageHandler } = loadBackground();
+    const sendResponse = jest.fn();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, sendResponse);
+    mockChannel.joinReceiveHandlers["ok"]({});
+
+    expect(sendResponse).toHaveBeenCalledWith({ connected: true });
+  });
+});
+
+describe("GET_REMOTE_CONFIG", () => {
+  test("returns hardcoded defaults when never connected", () => {
+    const { messageHandler } = loadBackground();
+    const sendResponse = jest.fn();
+
+    messageHandler({ type: "GET_REMOTE_CONFIG" }, {}, sendResponse);
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      settings: { overlay_size_percent: 20, fireworks_enabled: true },
+      tuning: expect.objectContaining({ min_overlay_size_percent: 10 }),
+    });
+  });
+
+  test("returns last-known config after a successful join", () => {
+    const { messageHandler } = loadBackground();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+
+    const payload = {
+      settings: { overlay_size_percent: 60, fireworks_enabled: false },
+      tuning: { min_overlay_size_percent: 10 },
+    };
+    mockChannel.joinReceiveHandlers["ok"](payload);
+
+    const sendResponse = jest.fn();
+    messageHandler({ type: "GET_REMOTE_CONFIG" }, {}, sendResponse);
+
+    expect(sendResponse).toHaveBeenCalledWith(payload);
   });
 });
 

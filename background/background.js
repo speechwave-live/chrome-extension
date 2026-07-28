@@ -15,6 +15,24 @@ let channel = null;
 let currentSlide = 0;
 let intentionalDisconnect = false;
 let debugEnabled = false;
+let lastKnownSettings = null;
+let lastKnownTuning = null;
+
+const DEFAULT_REMOTE_CONFIG = {
+  settings: { overlay_size_percent: 20, fireworks_enabled: true },
+  tuning: {
+    default_overlay_size_percent: 20,
+    min_overlay_size_percent: 10,
+    overlay_margin_px: 8,
+    emoji_font_size_ratio: 0.14,
+    firework_font_size_ratio: 0.12,
+    firework_center_x_ratio: 0.5,
+    firework_center_y_ratio: 0.5,
+    firework_spread_min_ratio: 0.375,
+    firework_spread_range_ratio: 0.25,
+    emoji_rise_ratio: 0.3,
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -117,8 +135,17 @@ function connect(slug, apiKey, onResult) {
   });
 
   c.join()
-    .receive('ok', () => {
+    .receive('ok', (payload) => {
       console.info(`[Speechwave SW] Joined reactions:${slug}`);
+      if (payload && payload.settings && payload.tuning) {
+        lastKnownSettings = payload.settings;
+        lastKnownTuning = payload.tuning;
+        broadcastToSlidesTabs({
+          type: 'SET_REMOTE_CONFIG',
+          settings: lastKnownSettings,
+          tuning: lastKnownTuning,
+        });
+      }
       if (onResult) onResult({ connected: true });
     })
     .receive('error', ({ reason }) => {
@@ -204,9 +231,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     notifyPopup({ type: 'SLIDE_CHANGED', slide: currentSlide });
     // no sendResponse needed
 
-  } else if (msg.type === 'SET_FIREWORKS') {
-    broadcastToSlidesTabs({ type: 'SET_FIREWORKS', enabled: msg.enabled });
-    // no sendResponse needed
+  } else if (msg.type === 'GET_REMOTE_CONFIG') {
+    sendResponse({
+      settings: lastKnownSettings || DEFAULT_REMOTE_CONFIG.settings,
+      tuning: lastKnownTuning || DEFAULT_REMOTE_CONFIG.tuning,
+    });
+    // synchronous — no `return true` needed
 
   } else if (msg.type === 'TEST_FIREWORKS') {
     broadcastToSlidesTabs({ type: 'TEST_FIREWORKS' });
