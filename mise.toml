@@ -1,3 +1,11 @@
 [tasks.test]
 description = "Run the Jest suite"
 run = "npm test"
+
+[tasks.dev_on]
+description = "Turn on dev mode"
+run = "bin/dev_mode_on"
+
+[tasks.dev_off]
+description = "Turn off dev mode"
+run = "bin/dev_mode_off"
