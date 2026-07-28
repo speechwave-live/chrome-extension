@@ -3,12 +3,38 @@ const FIREWORKS_MIN_PERCENT = 0.4;
 const FIREWORKS_COOLDOWN_MS = 8000;
 const FIREWORKS_BURST_COUNT = 16;
 
+// Sizes below are tuned for a slide rendered at roughly this width; actual
+// values are scaled by overlayScale (slide width / this) so the overlay and
+// emoji stay proportional to the slide regardless of window/present size.
+const SLIDE_REFERENCE_WIDTH = 960;
+const MIN_OVERLAY_SCALE = 0.4;
+const MAX_OVERLAY_SCALE = 2;
+
+const OVERLAY_WIDTH = 160;
+const OVERLAY_HEIGHT = 200;
+const OVERLAY_RIGHT_MARGIN = 20;
+const OVERLAY_BOTTOM_MARGIN = 20;
+const EMOJI_FONT_SIZE = 28;
+const FIREWORK_FONT_SIZE = 24;
+const FIREWORK_CENTER_X = 80;
+const FIREWORK_CENTER_Y = 100;
+const FIREWORK_MIN_DISTANCE = 60;
+const FIREWORK_DISTANCE_RANGE = 40;
+// Google renders slide content in an iframe it stacks above regular page
+// content. Regardless of that iframe's own z-index, the maximum value beats
+// it under normal stacking rules (see docs/decisions.md for why fullscreen
+// mode additionally needs the top-layer reparenting below).
+const OVERLAY_MAX_Z_INDEX = 2147483647;
+
 const inFlight = {};
 let fireworksEnabled = false;
 let fireworksActive = false;
 let lastFireworksTime = 0;
 let slideInterval = null;
 let currentSlide = 0;
+// Updated by syncOverlayPosition (called via getOrCreateOverlay before every
+// spawn), so spawnEmoji/spawnFireworks always read the current slide's scale.
+let overlayScale = 1;
 
 const style = document.createElement("style");
 style.textContent = `
@@ -19,6 +45,79 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Google Slides renders the live presentation inside this iframe (present
+// mode, fullscreen or windowed). Anchoring to it (instead of assuming
+// slide == viewport) is what makes the overlay track the slide correctly
+// in windowed present mode.
+function getPresentIframe() {
+  return document.querySelector("iframe.punch-present-iframe");
+}
+
+// The iframe letterboxes the slide to preserve its aspect ratio (black bars
+// above/below or beside it), so the iframe's own rect is not the visible
+// slide's rect. The a11y element already used for slide-number tracking
+// (see adapters/google_slides.js) happens to be sized/positioned to match
+// the visible slide exactly, so we reuse it here instead of guessing at
+// the letterbox math ourselves. Its rect is relative to the iframe's own
+// viewport, so we offset it by the iframe's own rect to get top-document
+// coordinates.
+function getSlideRect(iframe) {
+  let idoc;
+  try {
+    idoc = iframe.contentDocument;
+  } catch (e) {
+    return null; // cross-origin — shouldn't happen for our own present iframe, but don't crash
+  }
+  if (!idoc) return null;
+
+  const slideEl = idoc.querySelector('.punch-viewer-svgpage-a11yelement[aria-label*="Slide"]');
+  if (!slideEl) return null;
+
+  const iframeRect = iframe.getBoundingClientRect();
+  const innerRect = slideEl.getBoundingClientRect();
+  return {
+    left: iframeRect.left + innerRect.left,
+    right: iframeRect.left + innerRect.right,
+    top: iframeRect.top + innerRect.top,
+    bottom: iframeRect.top + innerRect.bottom,
+  };
+}
+
+function syncOverlayPosition(overlay) {
+  const iframe = getPresentIframe();
+  const rect = iframe && (getSlideRect(iframe) || iframe.getBoundingClientRect());
+
+  if (rect) {
+    const rawScale = (rect.right - rect.left) / SLIDE_REFERENCE_WIDTH;
+    overlayScale = Math.min(MAX_OVERLAY_SCALE, Math.max(MIN_OVERLAY_SCALE, rawScale));
+
+    const width = OVERLAY_WIDTH * overlayScale;
+    const height = OVERLAY_HEIGHT * overlayScale;
+    // Margin scales with everything else so the overlay covers roughly the
+    // same proportion of the slide at any size (not just the same box size
+    // in a fixed-size gap).
+    const rightMargin = OVERLAY_RIGHT_MARGIN * overlayScale;
+    const bottomMargin = OVERLAY_BOTTOM_MARGIN * overlayScale;
+
+    overlay.style.width = `${width}px`;
+    overlay.style.height = `${height}px`;
+    overlay.style.left = `${rect.right - width - rightMargin}px`;
+    overlay.style.top = `${rect.bottom - height - bottomMargin}px`;
+    overlay.style.right = "";
+    overlay.style.bottom = "";
+    overlay.style.zIndex = OVERLAY_MAX_Z_INDEX;
+  } else {
+    overlayScale = 1;
+    overlay.style.width = `${OVERLAY_WIDTH}px`;
+    overlay.style.height = `${OVERLAY_HEIGHT}px`;
+    overlay.style.left = "";
+    overlay.style.top = "";
+    overlay.style.right = `${OVERLAY_RIGHT_MARGIN}px`;
+    overlay.style.bottom = `${OVERLAY_BOTTOM_MARGIN}px`;
+    overlay.style.zIndex = 999999;
+  }
+}
+
 function getOrCreateOverlay() {
   let overlay = document.getElementById("speechwave-overlay");
   if (!overlay) {
@@ -26,16 +125,12 @@ function getOrCreateOverlay() {
     overlay.id = "speechwave-overlay";
     overlay.style.cssText = [
       "position: fixed",
-      "bottom: 40px",
-      "right: 20px",
-      "width: 160px",
-      "height: 200px",
       "pointer-events: none",
-      "z-index: 999999",
       "overflow: hidden",
     ].join(";");
     document.body.appendChild(overlay);
   }
+  syncOverlayPosition(overlay);
   return overlay;
 }
 
@@ -59,7 +154,7 @@ function spawnEmoji(emoji) {
     "position: absolute",
     "bottom: 0",
     `left: ${Math.floor(Math.random() * 70)}%`,
-    "font-size: 28px",
+    `font-size: ${EMOJI_FONT_SIZE * overlayScale}px`,
     "animation: speechwaveFloat 2.5s ease-out forwards",
     "pointer-events: none",
   ].join(";");
@@ -95,14 +190,14 @@ function spawnFireworks(emoji) {
   }
 
   const overlay = getOrCreateOverlay();
-  const cx = 80;
-  const cy = 100;
+  const cx = FIREWORK_CENTER_X * overlayScale;
+  const cy = FIREWORK_CENTER_Y * overlayScale;
   let remaining = FIREWORKS_BURST_COUNT;
   const safetyTimer = setTimeout(() => { fireworksActive = false; }, 2000);
 
   for (let i = 0; i < FIREWORKS_BURST_COUNT; i++) {
     const angle = (i / FIREWORKS_BURST_COUNT) * 2 * Math.PI;
-    const dist = 60 + Math.random() * 40;
+    const dist = (FIREWORK_MIN_DISTANCE + Math.random() * FIREWORK_DISTANCE_RANGE) * overlayScale;
     const tx = Math.round(Math.cos(angle) * dist);
     const ty = Math.round(Math.sin(angle) * dist);
     const delay = Math.random() * 300;
@@ -113,7 +208,7 @@ function spawnFireworks(emoji) {
       "position: absolute",
       `left: ${cx}px`,
       `top: ${cy}px`,
-      "font-size: 24px",
+      `font-size: ${FIREWORK_FONT_SIZE * overlayScale}px`,
       "pointer-events: none",
     ].join(";");
     overlay.appendChild(el);
