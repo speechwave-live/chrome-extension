@@ -28,10 +28,10 @@ Popup UI                Service Worker              Content Script
 
 Message flow:
 
-- Popup to service worker: `SET_SLUG`, `GET_STATUS`, `START_SESSION`, `STOP_SESSION`, `SET_FIREWORKS`, `TEST_FIREWORKS`
+- Popup to service worker: `SET_SLUG`, `GET_STATUS`, `START_SESSION`, `STOP_SESSION`, `TEST_FIREWORKS`
 - Service worker to popup: `SLIDE_CHANGED`, `CONNECT_ERROR`
-- Service worker to content scripts (Slides tabs only): `RENDER_EMOJI`, `SET_FIREWORKS`, `TEST_FIREWORKS`
-- Content script to service worker: `SLIDE_CHANGED`
+- Service worker to content scripts (Slides tabs only): `RENDER_EMOJI`, `SET_REMOTE_CONFIG`, `TEST_FIREWORKS`
+- Content script to service worker: `SLIDE_CHANGED`, `GET_REMOTE_CONFIG`
 
 ### Fireworks animation
 
@@ -43,7 +43,7 @@ count(emoji) >= FIREWORKS_MIN_COUNT  &&  count(emoji) / total_in_flight >= FIREW
 
 The absolute count guard (`MIN_COUNT = 5`) prevents bursts from firing with tiny audiences. The percentage guard (`MIN_PERCENT = 0.4`) prevents bursts from firing when the crowd is sending many different emojis, since it requires this emoji to be dominant, not merely frequent. A global cooldown (`FIREWORKS_COOLDOWN_MS = 8000`) prevents back to back bursts, and only one burst can play at a time (`fireworksActive` flag).
 
-The presenter can toggle fireworks on or off at any time from the Fireworks animations checkbox in the popup. The preference is saved to `chrome.storage.sync`, so it persists across devices and page reloads.
+Fireworks (and overlay size) are no longer controlled from the popup. They're set from the account Settings page on the web app and delivered to the extension as a `{settings, tuning}` config over the reactions channel: the service worker broadcasts `SET_REMOTE_CONFIG` to connected Slides tabs on every change, and a content script that starts up after a connection already exists asks for the current config via `GET_REMOTE_CONFIG`. Changes take effect the next time the extension connects to a talk, no extension update needed.
 
 In flight tracking works through `spawnEmoji()`, which increments a per-emoji counter (`inFlight["❤️"]++`) when an element is created, and decrements it in the `animationend` listener when the element is removed. The 2.5s animation duration acts as a natural sliding window, so `total_in_flight` reflects reactions from the last 2.5 seconds or so, giving a real time proxy for current crowd engagement.
 
