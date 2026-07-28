@@ -27,13 +27,7 @@ beforeEach(() => {
   document.head.innerHTML = "";
   jest.resetAllMocks();
   delete window.SpeechwaveAdapterRegistry;
-  window.SpeechwaveFireworks = {
-    checkFireworksTrigger: jest.fn((inFlight, emoji, options) => {
-      const count = inFlight[emoji] || 0;
-      const total = Object.values(inFlight).reduce((a, b) => a + b, 0);
-      return count >= options.minCount && (count / total) >= options.minPercent;
-    }),
-  };
+  window.SpeechwaveFireworks = require("../lib/fireworks");
   // jsdom doesn't implement the Web Animations API used by spawnFireworks.
   Element.prototype.animate = jest.fn().mockReturnValue({ addEventListener: jest.fn() });
 });
