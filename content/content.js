@@ -26,8 +26,26 @@ const FIREWORK_DISTANCE_RANGE = 40;
 // mode additionally needs the top-layer reparenting below).
 const OVERLAY_MAX_Z_INDEX = 2147483647;
 
+const DEFAULT_CONFIG = {
+  settings: { overlay_size_percent: 20, fireworks_enabled: true },
+  tuning: {
+    default_overlay_size_percent: 20,
+    min_overlay_size_percent: 10,
+    overlay_margin_px: 8,
+    emoji_font_size_ratio: 0.14,
+    firework_font_size_ratio: 0.12,
+    firework_center_x_ratio: 0.5,
+    firework_center_y_ratio: 0.5,
+    firework_spread_min_ratio: 0.375,
+    firework_spread_range_ratio: 0.25,
+    emoji_rise_ratio: 0.3,
+  },
+};
+
+let remoteConfig = DEFAULT_CONFIG;
+
 const inFlight = {};
-let fireworksEnabled = false;
+let fireworksEnabled = DEFAULT_CONFIG.settings.fireworks_enabled;
 let fireworksActive = false;
 let lastFireworksTime = 0;
 let slideInterval = null;
@@ -255,8 +273,9 @@ function startSlideObserver() {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "RENDER_EMOJI") {
     spawnEmoji(msg.emoji);
-  } else if (msg.type === "SET_FIREWORKS") {
-    fireworksEnabled = msg.enabled;
+  } else if (msg.type === "SET_REMOTE_CONFIG") {
+    remoteConfig = { settings: msg.settings, tuning: msg.tuning };
+    fireworksEnabled = remoteConfig.settings.fireworks_enabled;
   } else if (msg.type === "TEST_FIREWORKS") {
     if (!fireworksActive) {
       const testEmojis = ["❤️", "😂", "👏", "🤯", "🙋🏻", "🎉", "💩", "😮", "🎯"];
@@ -268,6 +287,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 getOrCreateOverlay();
 startSlideObserver();
 
-chrome.storage.sync.get({ fireworksEnabled: true }, ({ fireworksEnabled: val }) => {
-  fireworksEnabled = val;
+chrome.runtime.sendMessage({ type: "GET_REMOTE_CONFIG" }, (response) => {
+  if (chrome.runtime.lastError) return;
+  if (response && response.settings && response.tuning) {
+    remoteConfig = response;
+    fireworksEnabled = remoteConfig.settings.fireworks_enabled;
+  }
 });

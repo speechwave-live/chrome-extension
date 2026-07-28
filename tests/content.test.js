@@ -7,10 +7,6 @@ const CONTENT_JS = fs.readFileSync(
 );
 
 function loadContent() {
-  chrome.storage.sync.get.mockImplementation((_keys, callback) => {
-    callback({ fireworksEnabled: false });
-  });
-
   chrome.runtime.sendMessage.mockImplementation((_msg, callback) => {
     if (callback) callback();
   });
@@ -31,6 +27,13 @@ beforeEach(() => {
   document.head.innerHTML = "";
   jest.resetAllMocks();
   delete window.SpeechwaveAdapterRegistry;
+  window.SpeechwaveFireworks = {
+    checkFireworksTrigger: jest.fn((inFlight, emoji, options) => {
+      const count = inFlight[emoji] || 0;
+      const total = Object.values(inFlight).reduce((a, b) => a + b, 0);
+      return count >= options.minCount && (count / total) >= options.minPercent;
+    }),
+  };
   // jsdom doesn't implement the Web Animations API used by spawnFireworks.
   Element.prototype.animate = jest.fn().mockReturnValue({ addEventListener: jest.fn() });
 });
@@ -239,6 +242,67 @@ describe("overlay and emoji scale with the slide's rendered size", () => {
     expect(span.style.left).toBe("40px"); // 80 * 0.5
     expect(span.style.top).toBe("50px"); // 100 * 0.5
     expect(span.style.fontSize).toBe("12px"); // 24 * 0.5
+  });
+});
+
+describe("remote config", () => {
+  test("requests GET_REMOTE_CONFIG on load", () => {
+    loadContent();
+
+    const call = chrome.runtime.sendMessage.mock.calls.find(
+      ([msg]) => msg.type === "GET_REMOTE_CONFIG"
+    );
+    expect(call).toBeDefined();
+  });
+
+  test("SET_REMOTE_CONFIG with fireworks_enabled: false suppresses firework triggering", () => {
+    const { messageHandler } = loadContent();
+
+    messageHandler(
+      {
+        type: "SET_REMOTE_CONFIG",
+        settings: { overlay_size_percent: 20, fireworks_enabled: false },
+        tuning: { min_overlay_size_percent: 10 },
+      },
+      {},
+      jest.fn()
+    );
+
+    for (let i = 0; i < 6; i++) {
+      messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+    }
+
+    expect(Element.prototype.animate).not.toHaveBeenCalled();
+  });
+
+  test("SET_REMOTE_CONFIG with fireworks_enabled: true allows firework triggering", () => {
+    const { messageHandler } = loadContent();
+
+    messageHandler(
+      {
+        type: "SET_REMOTE_CONFIG",
+        settings: { overlay_size_percent: 20, fireworks_enabled: true },
+        tuning: { min_overlay_size_percent: 10 },
+      },
+      {},
+      jest.fn()
+    );
+
+    for (let i = 0; i < 6; i++) {
+      messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+    }
+
+    expect(Element.prototype.animate).toHaveBeenCalled();
+  });
+
+  test("defaults to fireworks enabled before any config arrives", () => {
+    const { messageHandler } = loadContent();
+
+    for (let i = 0; i < 6; i++) {
+      messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+    }
+
+    expect(Element.prototype.animate).toHaveBeenCalled();
   });
 });
 
