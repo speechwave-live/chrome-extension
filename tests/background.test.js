@@ -80,6 +80,7 @@ class MockSocket {
 function loadBackground({ slug = null, apiKey = null } = {}) {
   global.importScripts = jest.fn();
   global.Phoenix = { Socket: MockSocket };
+  global.DEFAULT_REMOTE_CONFIG = require("../lib/default_remote_config").DEFAULT_REMOTE_CONFIG;
 
   chrome.storage.local.get.mockImplementation((_key, callback) => {
     callback(slug ? { slug } : {});

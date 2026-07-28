@@ -28,6 +28,7 @@ beforeEach(() => {
   jest.resetAllMocks();
   delete window.SpeechwaveAdapterRegistry;
   window.SpeechwaveFireworks = require("../lib/fireworks");
+  global.DEFAULT_REMOTE_CONFIG = require("../lib/default_remote_config").DEFAULT_REMOTE_CONFIG;
   // jsdom doesn't implement the Web Animations API used by spawnFireworks.
   Element.prototype.animate = jest.fn().mockReturnValue({ addEventListener: jest.fn() });
 });

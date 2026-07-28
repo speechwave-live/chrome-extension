@@ -26,7 +26,7 @@
   "content_scripts": [
     {
       "matches": ["https://docs.google.com/presentation/*"],
-      "js": ["lib/fireworks.js", "adapters/google_slides.js", "adapters/index.js", "content/content.js"],
+      "js": ["lib/fireworks.js", "lib/default_remote_config.js", "adapters/google_slides.js", "adapters/index.js", "content/content.js"],
       "run_at": "document_idle"
     }
   ]
