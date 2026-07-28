@@ -106,6 +106,30 @@ describe("overlay sizing: percent of the slide's actual dimensions", () => {
     expect(overlay.style.top).toBe("");
   });
 
+  test("no-iframe fallback still gives the overlay non-zero dimensions, so reactions stay visible", () => {
+    const { messageHandler } = loadContent();
+    const overlay = document.getElementById("speechwave-overlay");
+
+    // Regression guard: width/height used to be cleared to "" in this branch,
+    // which made spawnEmoji/spawnFireworks compute a 0px box (parseFloat("") === 0),
+    // rendering reactions invisible whenever no presentation iframe is found.
+    expect(overlay.style.width).not.toBe("");
+    expect(overlay.style.height).not.toBe("");
+    expect(parseFloat(overlay.style.width)).toBeGreaterThan(0);
+    expect(parseFloat(overlay.style.height)).toBeGreaterThan(0);
+
+    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+    const emojiSpan = overlay.querySelector("span");
+    expect(emojiSpan.style.fontSize).not.toBe("");
+    expect(parseFloat(emojiSpan.style.fontSize)).toBeGreaterThan(0);
+
+    messageHandler({ type: "TEST_FIREWORKS" }, {}, jest.fn());
+    const spans = overlay.querySelectorAll("span");
+    const fireworkSpan = spans[spans.length - 1]; // fireworks are appended after the emoji span above
+    expect(parseFloat(fireworkSpan.style.left)).toBeGreaterThan(0);
+    expect(parseFloat(fireworkSpan.style.fontSize)).toBeGreaterThan(0);
+  });
+
   test("sizes the overlay to overlay_size_percent of the slide's actual dimensions", () => {
     addPresentIframe({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500 });
     loadContent();

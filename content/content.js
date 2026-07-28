@@ -116,8 +116,20 @@ function syncOverlayPosition(overlay) {
     overlay.style.bottom = "";
     overlay.style.zIndex = OVERLAY_MAX_Z_INDEX;
   } else {
-    overlay.style.width = "";
-    overlay.style.height = "";
+    // No presentation iframe detected (extension active before "Present" is
+    // clicked, or Google Slides' DOM changed and our selector stopped
+    // matching). Fall back to sizing off the browser viewport instead of the
+    // slide, so the overlay still scales with the user's chosen size and
+    // never collapses to 0x0 — degrade gracefully rather than going invisible.
+    const percent = Math.max(
+      remoteConfig.settings.overlay_size_percent,
+      tuning.min_overlay_size_percent
+    );
+    const width = round2(window.innerWidth * (percent / 100));
+    const height = round2(window.innerHeight * (percent / 100));
+
+    overlay.style.width = `${width}px`;
+    overlay.style.height = `${height}px`;
     overlay.style.left = "";
     overlay.style.top = "";
     overlay.style.right = `${tuning.overlay_margin_px}px`;
