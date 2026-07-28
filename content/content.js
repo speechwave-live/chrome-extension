@@ -106,8 +106,8 @@ function syncOverlayPosition(overlay) {
     const height = round2(slideHeight * (percent / 100));
     // Clamp margin so the box never overflows the slide's opposite edges —
     // at percent close to 100 there isn't room for the full configured margin.
-    const marginX = round2(Math.min(tuning.overlay_margin_px, slideWidth - width));
-    const marginY = round2(Math.min(tuning.overlay_margin_px, slideHeight - height));
+    const marginX = Math.min(tuning.overlay_margin_px, slideWidth - width);
+    const marginY = Math.min(tuning.overlay_margin_px, slideHeight - height);
 
     overlay.style.width = `${width}px`;
     overlay.style.height = `${height}px`;
