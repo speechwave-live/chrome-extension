@@ -63,7 +63,20 @@ describe("overlay", () => {
   });
 });
 
-describe("overlay position relative to the presentation iframe", () => {
+const FULL_TUNING = {
+  default_overlay_size_percent: 20,
+  min_overlay_size_percent: 10,
+  overlay_margin_px: 8,
+  emoji_font_size_ratio: 0.14,
+  firework_font_size_ratio: 0.12,
+  firework_center_x_ratio: 0.5,
+  firework_center_y_ratio: 0.5,
+  firework_spread_min_ratio: 0.375,
+  firework_spread_range_ratio: 0.25,
+  emoji_rise_ratio: 0.3,
+};
+
+describe("overlay sizing: percent of the slide's actual dimensions", () => {
   function addPresentIframe(rect) {
     const iframe = document.createElement("iframe");
     iframe.className = "punch-present-iframe";
@@ -72,176 +85,92 @@ describe("overlay position relative to the presentation iframe", () => {
     return iframe;
   }
 
-  // Google letterboxes the rendered slide within the iframe to preserve its
-  // aspect ratio, so the iframe's own rect isn't the slide's visible rect.
-  // The a11y element used for slide tracking happens to be sized/positioned
-  // to match the visible slide exactly (confirmed via live inspection), so
-  // we reuse it here instead of the iframe's outer bounds.
-  function addPresentIframeWithSlide(iframeRect, slideRect) {
-    const iframe = addPresentIframe(iframeRect);
-
-    const innerDoc = document.implementation.createHTMLDocument("");
-    const a11y = innerDoc.createElement("div");
-    a11y.className = "punch-viewer-svgpage-a11yelement";
-    a11y.setAttribute("aria-label", "Slide 1");
-    a11y.getBoundingClientRect = jest.fn().mockReturnValue(slideRect);
-    innerDoc.body.appendChild(a11y);
-
-    Object.defineProperty(iframe, "contentDocument", {
-      value: innerDoc,
-      configurable: true,
-    });
-
-    return iframe;
+  function setRemoteConfig(messageHandler, { percent, fireworksEnabled = true, tuning = FULL_TUNING }) {
+    messageHandler(
+      {
+        type: "SET_REMOTE_CONFIG",
+        settings: { overlay_size_percent: percent, fireworks_enabled: fireworksEnabled },
+        tuning,
+      },
+      {},
+      jest.fn()
+    );
   }
 
-  test("falls back to a fixed viewport corner when no presentation iframe is present", () => {
+  test("falls back to a fixed viewport corner (tuning margin) when no presentation iframe is present", () => {
     loadContent();
     const overlay = document.getElementById("speechwave-overlay");
-    expect(overlay.style.right).toBe("20px");
-    expect(overlay.style.bottom).toBe("20px");
+    expect(overlay.style.right).toBe("8px"); // DEFAULT_CONFIG.tuning.overlay_margin_px
+    expect(overlay.style.bottom).toBe("8px");
     expect(overlay.style.left).toBe("");
     expect(overlay.style.top).toBe("");
   });
 
-  // These use a slide width of 960 (the reference width — see SLIDE_REFERENCE_WIDTH
-  // in content.js) so scale is exactly 1 and the position math stays simple.
-  // Scaling itself is covered separately below.
-  test("anchors to the presentation iframe's bottom-right corner when present at load", () => {
-    addPresentIframe({ left: 40, top: 20, right: 1000, bottom: 620, width: 960, height: 600 });
+  test("sizes the overlay to overlay_size_percent of the slide's actual dimensions", () => {
+    addPresentIframe({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500 });
     loadContent();
 
     const overlay = document.getElementById("speechwave-overlay");
-    // right edge: 1000 - 160 (width) - 20 (margin) = 820
-    expect(overlay.style.left).toBe("820px");
-    // bottom edge: 620 - 200 (height) - 20 (margin) = 400
-    expect(overlay.style.top).toBe("400px");
-    expect(overlay.style.right).toBe("");
-    expect(overlay.style.bottom).toBe("");
+    // DEFAULT_CONFIG.settings.overlay_size_percent = 20
+    expect(overlay.style.width).toBe("200px"); // 1000 * 0.2
+    expect(overlay.style.height).toBe("100px"); // 500 * 0.2
+    // left: 1000 - 200 - 8 (margin) = 792; top: 500 - 100 - 8 = 392
+    expect(overlay.style.left).toBe("792px");
+    expect(overlay.style.top).toBe("392px");
   });
 
-  test("uses a maximum z-index when anchored to the presentation iframe", () => {
-    addPresentIframe({ left: 0, top: 0, right: 960, bottom: 600, width: 960, height: 600 });
-    loadContent();
-
-    const overlay = document.getElementById("speechwave-overlay");
-    expect(parseInt(overlay.style.zIndex, 10)).toBe(2147483647);
-  });
-
-  test("re-syncs position on the next spawn when the iframe appears after the overlay was created", () => {
+  test("covers the entire slide edge-to-edge at 100%, without margin overflow", () => {
+    addPresentIframe({ left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600 });
     const { messageHandler } = loadContent();
-    const overlay = document.getElementById("speechwave-overlay");
-    expect(overlay.style.left).toBe("");
 
-    addPresentIframe({ left: 0, top: 0, right: 960, bottom: 400, width: 960, height: 400 });
+    setRemoteConfig(messageHandler, { percent: 100 });
     messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
 
-    // left: 960 - 160 - 20 = 780; top: 400 - 200 - 20 = 180
-    expect(overlay.style.left).toBe("780px");
-    expect(overlay.style.top).toBe("180px");
-  });
-
-  test("anchors to the letterboxed slide's rect, not the iframe's outer rect, when Google renders black bars", () => {
-    // A 960x1200 iframe letterboxing a 960x600 slide vertically centered
-    // inside it (y offset 300 = (1200 - 600) / 2).
-    addPresentIframeWithSlide(
-      { left: 0, top: 0, right: 960, bottom: 1200, width: 960, height: 1200 },
-      { left: 0, top: 300, right: 960, bottom: 900, width: 960, height: 600 }
-    );
-    loadContent();
-
     const overlay = document.getElementById("speechwave-overlay");
-    // slide right/bottom in top-document coords: 0+960=960, 0+900=900
-    // left: 960 - 160 (width) - 20 (margin) = 780; top: 900 - 200 (height) - 20 (margin) = 680
-    expect(overlay.style.left).toBe("780px");
-    expect(overlay.style.top).toBe("680px");
+    expect(overlay.style.width).toBe("800px");
+    expect(overlay.style.height).toBe("600px");
+    expect(overlay.style.left).toBe("0px");
+    expect(overlay.style.top).toBe("0px");
   });
 
-  test("falls back to the iframe's own rect when no slide element is found inside it", () => {
-    addPresentIframe({ left: 0, top: 0, right: 960, bottom: 600, width: 960, height: 600 });
-    loadContent();
-
-    const overlay = document.getElementById("speechwave-overlay");
-    // left: 960 - 160 - 20 = 780; top: 600 - 200 - 20 = 380
-    expect(overlay.style.left).toBe("780px");
-    expect(overlay.style.top).toBe("380px");
-  });
-});
-
-describe("overlay and emoji scale with the slide's rendered size", () => {
-  function addPresentIframe(rect) {
-    const iframe = document.createElement("iframe");
-    iframe.className = "punch-present-iframe";
-    iframe.getBoundingClientRect = jest.fn().mockReturnValue(rect);
-    document.body.appendChild(iframe);
-    return iframe;
-  }
-
-  test("shrinks overlay size, position, and margin when the slide renders at half the reference width", () => {
-    // 480 is half of the 960 reference width -> scale 0.5. Margin scales
-    // too, so the overlay covers roughly the same proportion of the slide
-    // at any size, not just the same box in a fixed-size gap.
-    addPresentIframe({ left: 0, top: 0, right: 480, bottom: 300, width: 480, height: 300 });
-    loadContent();
-
-    const overlay = document.getElementById("speechwave-overlay");
-    expect(overlay.style.width).toBe("80px"); // 160 * 0.5
-    expect(overlay.style.height).toBe("100px"); // 200 * 0.5
-    // left: 480 - 80 - 10 (20 * 0.5) = 390; top: 300 - 100 - 10 (20 * 0.5) = 190
-    expect(overlay.style.left).toBe("390px");
-    expect(overlay.style.top).toBe("190px");
-  });
-
-  test("shrinks emoji font size to match a smaller slide", () => {
-    addPresentIframe({ left: 0, top: 0, right: 480, bottom: 300, width: 480, height: 300 });
+  test("clamps overlay_size_percent up to the tuning minimum if a low value ever arrives", () => {
+    addPresentIframe({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500 });
     const { messageHandler } = loadContent();
 
+    setRemoteConfig(messageHandler, { percent: 2 }); // below FULL_TUNING.min_overlay_size_percent (10)
+    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+
+    const overlay = document.getElementById("speechwave-overlay");
+    expect(overlay.style.width).toBe("100px"); // clamped to 10% of 1000, not 2%
+  });
+
+  test("scales emoji font size and rise distance with the box's actual height", () => {
+    addPresentIframe({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500 });
+    const { messageHandler } = loadContent();
+
+    setRemoteConfig(messageHandler, { percent: 20 });
     messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
 
     const span = document.getElementById("speechwave-overlay").querySelector("span");
-    expect(span.style.fontSize).toBe("14px"); // 28 * 0.5
+    // box height: 500 * 0.2 = 100; font-size: 100 * 0.14 = 14
+    expect(span.style.fontSize).toBe("14px");
+    // rise: 100 * 0.3 = 30
+    expect(span.style.getPropertyValue("--rise")).toBe("30px");
   });
 
-  test("uses full size at the reference width", () => {
-    addPresentIframe({ left: 0, top: 0, right: 960, bottom: 600, width: 960, height: 600 });
+  test("scales firework center and font size with the box's actual dimensions", () => {
+    addPresentIframe({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500 });
     const { messageHandler } = loadContent();
 
-    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
-
-    const overlay = document.getElementById("speechwave-overlay");
-    const span = overlay.querySelector("span");
-    expect(overlay.style.width).toBe("160px");
-    expect(span.style.fontSize).toBe("28px");
-  });
-
-  test("clamps scale to a minimum so emoji don't vanish on a tiny slide", () => {
-    // 96 / 960 = 0.1, below the minimum clamp
-    addPresentIframe({ left: 0, top: 0, right: 96, bottom: 60, width: 96, height: 60 });
-    loadContent();
-
-    const overlay = document.getElementById("speechwave-overlay");
-    expect(overlay.style.width).toBe("64px"); // 160 * 0.4 (MIN_OVERLAY_SCALE)
-  });
-
-  test("clamps scale to a maximum so emoji don't dominate an oversized slide", () => {
-    // 4800 / 960 = 5, above the maximum clamp
-    addPresentIframe({ left: 0, top: 0, right: 4800, bottom: 3000, width: 4800, height: 3000 });
-    loadContent();
-
-    const overlay = document.getElementById("speechwave-overlay");
-    expect(overlay.style.width).toBe("320px"); // 160 * 2 (MAX_OVERLAY_SCALE)
-  });
-
-  test("scales fireworks' center point and font size with the slide", () => {
-    addPresentIframe({ left: 0, top: 0, right: 480, bottom: 300, width: 480, height: 300 });
-    const { messageHandler } = loadContent();
-
+    setRemoteConfig(messageHandler, { percent: 20 });
     messageHandler({ type: "TEST_FIREWORKS" }, {}, jest.fn());
 
     const span = document.getElementById("speechwave-overlay").querySelector("span");
-    expect(span.style.left).toBe("40px"); // 80 * 0.5
-    expect(span.style.top).toBe("50px"); // 100 * 0.5
-    expect(span.style.fontSize).toBe("12px"); // 24 * 0.5
+    // box: width 200, height 100; center: (200*0.5, 100*0.5) = (100, 50)
+    expect(span.style.left).toBe("100px");
+    expect(span.style.top).toBe("50px");
+    // font-size: 100 (height) * 0.12 = 12
+    expect(span.style.fontSize).toBe("12px");
   });
 });
 

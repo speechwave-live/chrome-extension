@@ -3,23 +3,6 @@ const FIREWORKS_MIN_PERCENT = 0.4;
 const FIREWORKS_COOLDOWN_MS = 8000;
 const FIREWORKS_BURST_COUNT = 16;
 
-// Sizes below are tuned for a slide rendered at roughly this width; actual
-// values are scaled by overlayScale (slide width / this) so the overlay and
-// emoji stay proportional to the slide regardless of window/present size.
-const SLIDE_REFERENCE_WIDTH = 960;
-const MIN_OVERLAY_SCALE = 0.4;
-const MAX_OVERLAY_SCALE = 2;
-
-const OVERLAY_WIDTH = 160;
-const OVERLAY_HEIGHT = 200;
-const OVERLAY_RIGHT_MARGIN = 20;
-const OVERLAY_BOTTOM_MARGIN = 20;
-const EMOJI_FONT_SIZE = 28;
-const FIREWORK_FONT_SIZE = 24;
-const FIREWORK_CENTER_X = 80;
-const FIREWORK_CENTER_Y = 100;
-const FIREWORK_MIN_DISTANCE = 60;
-const FIREWORK_DISTANCE_RANGE = 40;
 // Google renders slide content in an iframe it stacks above regular page
 // content. Regardless of that iframe's own z-index, the maximum value beats
 // it under normal stacking rules (see docs/decisions.md for why fullscreen
@@ -44,21 +27,26 @@ const DEFAULT_CONFIG = {
 
 let remoteConfig = DEFAULT_CONFIG;
 
+// Ratio multiplications like `boxHeight * tuning.emoji_font_size_ratio` can
+// land on a binary floating-point value that's off by a trailing epsilon
+// (e.g. 100 * 0.14 === 14.000000000000002), which would otherwise leak into
+// the rendered CSS pixel value. Round it away.
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
 const inFlight = {};
 let fireworksEnabled = DEFAULT_CONFIG.settings.fireworks_enabled;
 let fireworksActive = false;
 let lastFireworksTime = 0;
 let slideInterval = null;
 let currentSlide = 0;
-// Updated by syncOverlayPosition (called via getOrCreateOverlay before every
-// spawn), so spawnEmoji/spawnFireworks always read the current slide's scale.
-let overlayScale = 1;
 
 const style = document.createElement("style");
 style.textContent = `
   @keyframes speechwaveFloat {
     0%   { transform: translateY(0);    opacity: 1; }
-    100% { transform: translateY(-60px); opacity: 0; }
+    100% { transform: translateY(calc(-1 * var(--rise, 60px))); opacity: 0; }
   }
 `;
 document.head.appendChild(style);
@@ -104,34 +92,36 @@ function getSlideRect(iframe) {
 function syncOverlayPosition(overlay) {
   const iframe = getPresentIframe();
   const rect = iframe && (getSlideRect(iframe) || iframe.getBoundingClientRect());
+  const tuning = remoteConfig.tuning;
 
   if (rect) {
-    const rawScale = (rect.right - rect.left) / SLIDE_REFERENCE_WIDTH;
-    overlayScale = Math.min(MAX_OVERLAY_SCALE, Math.max(MIN_OVERLAY_SCALE, rawScale));
-
-    const width = OVERLAY_WIDTH * overlayScale;
-    const height = OVERLAY_HEIGHT * overlayScale;
-    // Margin scales with everything else so the overlay covers roughly the
-    // same proportion of the slide at any size (not just the same box size
-    // in a fixed-size gap).
-    const rightMargin = OVERLAY_RIGHT_MARGIN * overlayScale;
-    const bottomMargin = OVERLAY_BOTTOM_MARGIN * overlayScale;
+    const percent = Math.max(
+      remoteConfig.settings.overlay_size_percent,
+      tuning.min_overlay_size_percent
+    );
+    const slideWidth = rect.right - rect.left;
+    const slideHeight = rect.bottom - rect.top;
+    const width = slideWidth * (percent / 100);
+    const height = slideHeight * (percent / 100);
+    // Clamp margin so the box never overflows the slide's opposite edges —
+    // at percent close to 100 there isn't room for the full configured margin.
+    const marginX = Math.min(tuning.overlay_margin_px, slideWidth - width);
+    const marginY = Math.min(tuning.overlay_margin_px, slideHeight - height);
 
     overlay.style.width = `${width}px`;
     overlay.style.height = `${height}px`;
-    overlay.style.left = `${rect.right - width - rightMargin}px`;
-    overlay.style.top = `${rect.bottom - height - bottomMargin}px`;
+    overlay.style.left = `${rect.right - width - marginX}px`;
+    overlay.style.top = `${rect.bottom - height - marginY}px`;
     overlay.style.right = "";
     overlay.style.bottom = "";
     overlay.style.zIndex = OVERLAY_MAX_Z_INDEX;
   } else {
-    overlayScale = 1;
-    overlay.style.width = `${OVERLAY_WIDTH}px`;
-    overlay.style.height = `${OVERLAY_HEIGHT}px`;
+    overlay.style.width = "";
+    overlay.style.height = "";
     overlay.style.left = "";
     overlay.style.top = "";
-    overlay.style.right = `${OVERLAY_RIGHT_MARGIN}px`;
-    overlay.style.bottom = `${OVERLAY_BOTTOM_MARGIN}px`;
+    overlay.style.right = `${tuning.overlay_margin_px}px`;
+    overlay.style.bottom = `${tuning.overlay_margin_px}px`;
     overlay.style.zIndex = 999999;
   }
 }
@@ -166,16 +156,20 @@ function spawnEmoji(emoji) {
   inFlight[emoji] = (inFlight[emoji] || 0) + 1;
 
   const overlay = getOrCreateOverlay();
+  const boxHeight = parseFloat(overlay.style.height) || 0;
+  const tuning = remoteConfig.tuning;
+
   const el = document.createElement("span");
   el.textContent = emoji;
   el.style.cssText = [
     "position: absolute",
     "bottom: 0",
     `left: ${Math.floor(Math.random() * 70)}%`,
-    `font-size: ${EMOJI_FONT_SIZE * overlayScale}px`,
+    `font-size: ${round2(boxHeight * tuning.emoji_font_size_ratio)}px`,
     "animation: speechwaveFloat 2.5s ease-out forwards",
     "pointer-events: none",
   ].join(";");
+  el.style.setProperty("--rise", `${round2(boxHeight * tuning.emoji_rise_ratio)}px`);
   overlay.appendChild(el);
   el.addEventListener("animationend", () => {
     el.remove();
@@ -208,14 +202,19 @@ function spawnFireworks(emoji) {
   }
 
   const overlay = getOrCreateOverlay();
-  const cx = FIREWORK_CENTER_X * overlayScale;
-  const cy = FIREWORK_CENTER_Y * overlayScale;
+  const boxWidth = parseFloat(overlay.style.width) || 0;
+  const boxHeight = parseFloat(overlay.style.height) || 0;
+  const tuning = remoteConfig.tuning;
+  const cx = round2(boxWidth * tuning.firework_center_x_ratio);
+  const cy = round2(boxHeight * tuning.firework_center_y_ratio);
+  const spreadBase = Math.min(boxWidth, boxHeight);
   let remaining = FIREWORKS_BURST_COUNT;
   const safetyTimer = setTimeout(() => { fireworksActive = false; }, 2000);
 
   for (let i = 0; i < FIREWORKS_BURST_COUNT; i++) {
     const angle = (i / FIREWORKS_BURST_COUNT) * 2 * Math.PI;
-    const dist = (FIREWORK_MIN_DISTANCE + Math.random() * FIREWORK_DISTANCE_RANGE) * overlayScale;
+    const dist =
+      spreadBase * (tuning.firework_spread_min_ratio + Math.random() * tuning.firework_spread_range_ratio);
     const tx = Math.round(Math.cos(angle) * dist);
     const ty = Math.round(Math.sin(angle) * dist);
     const delay = Math.random() * 300;
@@ -226,7 +225,7 @@ function spawnFireworks(emoji) {
       "position: absolute",
       `left: ${cx}px`,
       `top: ${cy}px`,
-      `font-size: ${FIREWORK_FONT_SIZE * overlayScale}px`,
+      `font-size: ${round2(boxHeight * tuning.firework_font_size_ratio)}px`,
       "pointer-events: none",
     ].join(";");
     overlay.appendChild(el);
