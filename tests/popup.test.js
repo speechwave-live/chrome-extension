@@ -21,7 +21,9 @@ const POPUP_HTML = `
     </div>
     <input type="checkbox" id="fireworks-toggle" />
     <button id="test-fireworks-btn" style="display:none">Test</button>
-    <input type="checkbox" id="debug-toggle" />
+    <label id="debug-toggle-label" style="display:none">
+      <input type="checkbox" id="debug-toggle" />
+    </label>
     <a id="change-api-key-link" href="#">Change API key</a>
   </div>
 `;
@@ -31,7 +33,19 @@ const POPUP_JS = fs.readFileSync(
   "utf8"
 );
 
-function loadPopup({ apiKey = null, localData = {} } = {}) {
+// popup.js hardcodes `const DEV_MODE = true/false;`, flipped in place on
+// disk by bin/dev_mode_on|off for local manual testing. Tests must not
+// depend on whichever value a developer happens to have left checked out —
+// force it explicitly per test instead, so the suite is deterministic and
+// the dev-mode branch actually gets exercised regardless of local state.
+function popupSourceWithDevMode(devMode) {
+  if (!/^const DEV_MODE = (true|false);/m.test(POPUP_JS)) {
+    throw new Error("Could not find `const DEV_MODE = true/false;` in popup.js to override");
+  }
+  return POPUP_JS.replace(/^const DEV_MODE = (true|false);/m, `const DEV_MODE = ${devMode};`);
+}
+
+function loadPopup({ apiKey = null, localData = {}, devMode = false } = {}) {
   chrome.storage.sync.get.mockImplementation((keys, callback) => {
     if (Array.isArray(keys)) {
       callback(apiKey ? { apiKey } : {});
@@ -57,7 +71,7 @@ function loadPopup({ apiKey = null, localData = {} } = {}) {
   });
 
   // eslint-disable-next-line no-eval
-  eval(POPUP_JS);
+  eval(popupSourceWithDevMode(devMode));
 
   return { messageHandler };
 }
@@ -248,6 +262,34 @@ describe("incoming messages", () => {
 
     expect(document.getElementById("slide-indicator").textContent).toBe(
       "Slide —"
+    );
+  });
+});
+
+describe("dev mode", () => {
+  test("keeps the test-fireworks button and debug toggle hidden when dev mode is disabled", () => {
+    loadPopup({ apiKey: "key", devMode: false });
+
+    expect(document.getElementById("test-fireworks-btn").style.display).toBe("none");
+    expect(document.getElementById("debug-toggle-label").style.display).toBe("none");
+  });
+
+  test("reveals the test-fireworks button and debug toggle when dev mode is enabled", () => {
+    loadPopup({ apiKey: "key", devMode: true });
+
+    expect(document.getElementById("test-fireworks-btn").style.display).toBe("block");
+    expect(document.getElementById("debug-toggle-label").style.display).toBe("flex");
+  });
+
+  test("clicking the test-fireworks button sends a TEST_FIREWORKS message", () => {
+    loadPopup({ apiKey: "key", devMode: true });
+    chrome.runtime.sendMessage.mockClear();
+
+    document.getElementById("test-fireworks-btn").click();
+
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      { type: "TEST_FIREWORKS" },
+      expect.any(Function)
     );
   });
 });
