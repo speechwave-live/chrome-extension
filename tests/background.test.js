@@ -77,13 +77,22 @@ class MockSocket {
 
 // --- Load helper ---
 
-function loadBackground({ slug = null, apiKey = null } = {}) {
+function loadBackground({
+  slug = null,
+  apiKey = null,
+  lastKnownSettings = null,
+  lastKnownTuning = null,
+} = {}) {
   global.importScripts = jest.fn();
   global.Phoenix = { Socket: MockSocket };
   global.DEFAULT_REMOTE_CONFIG = require("../lib/default_remote_config").DEFAULT_REMOTE_CONFIG;
 
   chrome.storage.local.get.mockImplementation((_key, callback) => {
-    callback(slug ? { slug } : {});
+    callback({
+      ...(slug ? { slug } : {}),
+      ...(lastKnownSettings ? { lastKnownSettings } : {}),
+      ...(lastKnownTuning ? { lastKnownTuning } : {}),
+    });
   });
   chrome.storage.sync.get.mockImplementation((_key, callback) => {
     callback(apiKey ? { apiKey } : {});
@@ -355,6 +364,41 @@ describe("GET_REMOTE_CONFIG", () => {
     messageHandler({ type: "GET_REMOTE_CONFIG" }, {}, sendResponse);
 
     expect(sendResponse).toHaveBeenCalledWith(payload);
+  });
+
+  test("persists settings/tuning to storage.local on successful join", () => {
+    const { messageHandler } = loadBackground();
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+
+    const payload = {
+      settings: { overlay_size_percent: 45, fireworks_enabled: true },
+      tuning: { min_overlay_size_percent: 10 },
+    };
+    mockChannel.joinReceiveHandlers["ok"](payload);
+
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({
+      lastKnownSettings: payload.settings,
+      lastKnownTuning: payload.tuning,
+    });
+  });
+
+  test("hydrates last-known config from storage on startup, before any join", () => {
+    const storedSettings = { overlay_size_percent: 55, fireworks_enabled: false };
+    const storedTuning = { min_overlay_size_percent: 10 };
+
+    const { messageHandler } = loadBackground({
+      lastKnownSettings: storedSettings,
+      lastKnownTuning: storedTuning,
+    });
+
+    const sendResponse = jest.fn();
+    messageHandler({ type: "GET_REMOTE_CONFIG" }, {}, sendResponse);
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      settings: storedSettings,
+      tuning: storedTuning,
+    });
   });
 });
 

@@ -125,6 +125,7 @@ function connect(slug, apiKey, onResult) {
       if (payload && payload.settings && payload.tuning) {
         lastKnownSettings = payload.settings;
         lastKnownTuning = payload.tuning;
+        chrome.storage.local.set({ lastKnownSettings, lastKnownTuning });
         broadcastToSlidesTabs({
           type: 'SET_REMOTE_CONFIG',
           settings: lastKnownSettings,
@@ -237,9 +238,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 // Startup: read debug flag, then auto-reconnect
 // ---------------------------------------------------------------------------
 
-chrome.storage.local.get({ debugEnabled: false }, ({ debugEnabled: val }) => {
-  debugEnabled = val;
-  if (debugEnabled) debug('Service worker started, debug logging active');
-});
+chrome.storage.local.get(
+  { debugEnabled: false, lastKnownSettings: null, lastKnownTuning: null },
+  ({ debugEnabled: val, lastKnownSettings: storedSettings, lastKnownTuning: storedTuning }) => {
+    debugEnabled = val;
+    if (debugEnabled) debug('Service worker started, debug logging active');
+    if (storedSettings && storedTuning) {
+      lastKnownSettings = storedSettings;
+      lastKnownTuning = storedTuning;
+    }
+  }
+);
 
 reconnectFromStorage();
