@@ -252,6 +252,42 @@ describe("remote config", () => {
 
     expect(Element.prototype.animate).toHaveBeenCalled();
   });
+
+  test("SET_REMOTE_CONFIG with a partial payload backfills missing keys from DEFAULT_CONFIG", () => {
+    const { messageHandler } = loadContent();
+
+    messageHandler(
+      {
+        type: "SET_REMOTE_CONFIG",
+        settings: { overlay_size_percent: 50 }, // omits fireworks_enabled entirely
+        tuning: { min_overlay_size_percent: 10 }, // omits overlay_margin_px and everything else
+      },
+      {},
+      jest.fn()
+    );
+
+    // No presentation iframe is present in this test, so syncOverlayPosition
+    // takes the no-iframe fallback branch. RENDER_EMOJI re-runs
+    // getOrCreateOverlay -> syncOverlayPosition using the post-SET_REMOTE_CONFIG
+    // remoteConfig.
+    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+
+    const overlay = document.getElementById("speechwave-overlay");
+    // overlay_margin_px was omitted from the tuning payload; a correct merge
+    // backfills DEFAULT_CONFIG.tuning.overlay_margin_px (8) instead of
+    // producing "undefinedpx" (or NaN) from the missing key.
+    expect(overlay.style.right).toBe("8px");
+    expect(overlay.style.bottom).toBe("8px");
+
+    // fireworks_enabled was omitted from the settings payload; a correct
+    // merge backfills DEFAULT_CONFIG.settings.fireworks_enabled (true)
+    // instead of leaving it undefined, which is falsy and would silently
+    // suppress fireworks.
+    for (let i = 0; i < 6; i++) {
+      messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+    }
+    expect(Element.prototype.animate).toHaveBeenCalled();
+  });
 });
 
 describe("RENDER_EMOJI message", () => {
@@ -306,9 +342,6 @@ describe("slide observer", () => {
       getAdapter: jest.fn().mockReturnValue(mockAdapter),
     };
 
-    chrome.storage.sync.get.mockImplementation((_keys, callback) => {
-      callback({ fireworksEnabled: false });
-    });
     chrome.runtime.sendMessage.mockImplementation((_msg, callback) => {
       if (callback) callback();
     });
@@ -330,9 +363,6 @@ describe("slide observer", () => {
       getAdapter: jest.fn().mockReturnValue(mockAdapter),
     };
 
-    chrome.storage.sync.get.mockImplementation((_keys, callback) => {
-      callback({ fireworksEnabled: false });
-    });
     chrome.runtime.sendMessage.mockImplementation((_msg, callback) => {
       if (callback) callback();
     });
