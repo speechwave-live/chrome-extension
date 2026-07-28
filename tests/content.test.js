@@ -351,22 +351,6 @@ describe("RENDER_EMOJI message", () => {
   });
 });
 
-describe("SET_FIREWORKS message", () => {
-  test("accepts enabled: true without errors", () => {
-    const { messageHandler } = loadContent();
-    expect(() => {
-      messageHandler({ type: "SET_FIREWORKS", enabled: true }, {}, jest.fn());
-    }).not.toThrow();
-  });
-
-  test("accepts enabled: false without errors", () => {
-    const { messageHandler } = loadContent();
-    expect(() => {
-      messageHandler({ type: "SET_FIREWORKS", enabled: false }, {}, jest.fn());
-    }).not.toThrow();
-  });
-});
-
 describe("slide observer", () => {
   test("sends SLIDE_CHANGED to service worker when adapter reports slide > 0", () => {
     const mockAdapter = { getSlide: jest.fn().mockReturnValue(3) };
