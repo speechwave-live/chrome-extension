@@ -27,6 +27,21 @@ const DEFAULT_CONFIG = {
 
 let remoteConfig = DEFAULT_CONFIG;
 
+// The backend can deliver a partial {settings, tuning} payload (e.g. a
+// hand-edited Speechwave.ExtensionTuning.current/0 during manual testing
+// that's missing a key, or a future backend version that hasn't caught up
+// with a new tuning knob yet). Merge against DEFAULT_CONFIG's known-good
+// values instead of letting `undefined` propagate into pixel math, where it
+// would silently produce NaN CSS declarations that get dropped by the
+// browser (e.g. losing the overlay's anchoring entirely).
+function applyRemoteConfig({ settings, tuning }) {
+  remoteConfig = {
+    settings: { ...DEFAULT_CONFIG.settings, ...settings },
+    tuning: { ...DEFAULT_CONFIG.tuning, ...tuning },
+  };
+  fireworksEnabled = remoteConfig.settings.fireworks_enabled;
+}
+
 // Ratio multiplications like `boxHeight * tuning.emoji_font_size_ratio` can
 // land on a binary floating-point value that's off by a trailing epsilon
 // (e.g. 100 * 0.14 === 14.000000000000002), which would otherwise leak into
@@ -285,8 +300,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "RENDER_EMOJI") {
     spawnEmoji(msg.emoji);
   } else if (msg.type === "SET_REMOTE_CONFIG") {
-    remoteConfig = { settings: msg.settings, tuning: msg.tuning };
-    fireworksEnabled = remoteConfig.settings.fireworks_enabled;
+    applyRemoteConfig({ settings: msg.settings, tuning: msg.tuning });
   } else if (msg.type === "TEST_FIREWORKS") {
     if (!fireworksActive) {
       const testEmojis = ["❤️", "😂", "👏", "🤯", "🙋🏻", "🎉", "💩", "😮", "🎯"];
@@ -301,7 +315,6 @@ startSlideObserver();
 chrome.runtime.sendMessage({ type: "GET_REMOTE_CONFIG" }, (response) => {
   if (chrome.runtime.lastError) return;
   if (response && response.settings && response.tuning) {
-    remoteConfig = response;
-    fireworksEnabled = remoteConfig.settings.fireworks_enabled;
+    applyRemoteConfig(response);
   }
 });
