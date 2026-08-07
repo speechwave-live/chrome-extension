@@ -189,6 +189,11 @@ mise run test
 
 `mise run test` runs the Jest suite (`npm test`), covering popup UI state, content script overlay/emoji rendering, service worker message routing, and adapter/fireworks logic.
 
+### End-to-end tests
+
+`npm run test:e2e` runs a Playwright suite that loads the real extension
+against a live local speechwave dev server. See `docs/manual_tests.md`.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
