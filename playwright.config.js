@@ -8,4 +8,6 @@ module.exports = defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: "list",
+  globalSetup: require.resolve("./tests/e2e/support/global-setup.js"),
+  globalTeardown: require.resolve("./tests/e2e/support/global-teardown.js"),
 });
