@@ -35,3 +35,6 @@ dist/
 docs/_site/
 
 .superpowers/
+
+playwright-report/
+test-results/
