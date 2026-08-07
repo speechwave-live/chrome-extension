@@ -10,11 +10,20 @@ FIXTURE_ORIGIN="http://localhost:${FIXTURE_PORT}/*"
 MANIFEST_PATH="$ROOT/manifest.json" FIXTURE_ORIGIN="$FIXTURE_ORIGIN" node -e '
 const fs = require("fs");
 const path = process.env.MANIFEST_PATH;
-const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+const fixture = process.env.FIXTURE_ORIGIN;
+const original = fs.readFileSync(path, "utf8");
+
+// Parse to ensure validity and correctness
+const manifest = JSON.parse(original);
 manifest.content_scripts[0].matches = manifest.content_scripts[0].matches.filter(
-  (m) => m !== process.env.FIXTURE_ORIGIN
+  (m) => m !== fixture
 );
-fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
+
+// Replace only the matches array line, preserving all other formatting
+const matchesRegex = /"matches": \[([\s\S]*?)\]/;
+const newMatches = `"matches": [${manifest.content_scripts[0].matches.map(m => `"${m}"`).join(", ")}]`;
+const newContent = original.replace(matchesRegex, newMatches);
+fs.writeFileSync(path, newContent);
 '
 
 echo "e2e mode OFF — ${FIXTURE_ORIGIN} removed from content_scripts matches"

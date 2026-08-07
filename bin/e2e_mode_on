@@ -7,7 +7,7 @@ ROOT="$SCRIPT_DIR/.."
 FIXTURE_PORT="$(node -e "console.log(require('$ROOT/tests/e2e/support/constants.js').FIXTURE_PORT)")"
 FIXTURE_ORIGIN="http://localhost:${FIXTURE_PORT}/*"
 
-if grep -q "$FIXTURE_ORIGIN" "$ROOT/manifest.json"; then
+if grep -qF "$FIXTURE_ORIGIN" "$ROOT/manifest.json"; then
   echo "e2e mode already ON"
   exit 0
 fi
@@ -15,9 +15,18 @@ fi
 MANIFEST_PATH="$ROOT/manifest.json" FIXTURE_ORIGIN="$FIXTURE_ORIGIN" node -e '
 const fs = require("fs");
 const path = process.env.MANIFEST_PATH;
-const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
-manifest.content_scripts[0].matches.push(process.env.FIXTURE_ORIGIN);
-fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
+const fixture = process.env.FIXTURE_ORIGIN;
+const original = fs.readFileSync(path, "utf8");
+
+// Parse to ensure validity and correctness
+const manifest = JSON.parse(original);
+manifest.content_scripts[0].matches.push(fixture);
+
+// Replace only the matches array line, preserving all other formatting
+const matchesRegex = /"matches": \[([\s\S]*?)\]/;
+const newMatches = `"matches": [${manifest.content_scripts[0].matches.map(m => `"${m}"`).join(", ")}]`;
+const newContent = original.replace(matchesRegex, newMatches);
+fs.writeFileSync(path, newContent);
 '
 
 echo "e2e mode ON — ${FIXTURE_ORIGIN} added to content_scripts matches"
