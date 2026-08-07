@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$SCRIPT_DIR/.."
+
+FIXTURE_PORT="$(node -e "console.log(require('$ROOT/tests/e2e/support/constants.js').FIXTURE_PORT)")"
+FIXTURE_ORIGIN="http://localhost:${FIXTURE_PORT}/*"
+
+if grep -q "$FIXTURE_ORIGIN" "$ROOT/manifest.json"; then
+  echo "e2e mode already ON"
+  exit 0
+fi
+
+MANIFEST_PATH="$ROOT/manifest.json" FIXTURE_ORIGIN="$FIXTURE_ORIGIN" node -e '
+const fs = require("fs");
+const path = process.env.MANIFEST_PATH;
+const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+manifest.content_scripts[0].matches.push(process.env.FIXTURE_ORIGIN);
+fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
+'
+
+echo "e2e mode ON — ${FIXTURE_ORIGIN} added to content_scripts matches"
