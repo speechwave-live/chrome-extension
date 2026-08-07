@@ -18,7 +18,19 @@ function seedTalk(email) {
     ["run", "scripts/manual_tests/seed_active_session.exs", email],
     { cwd: SPEECHWAVE_ROOT, encoding: "utf8" }
   );
-  return parseKeyValueOutput(output);
+  const result = parseKeyValueOutput(output);
+  // `mix run` in the dev environment interleaves Ecto debug query logging
+  // into stdout alongside the script's key=value output, so verify parsing
+  // actually found the fields we need instead of trusting an empty/partial
+  // result silently — mirroring the safety net `fetchApiKey` uses above.
+  const requiredFields = ["talk_slug", "email", "talk_id", "session_id"];
+  const missing = requiredFields.filter((field) => !result[field]);
+  if (missing.length > 0) {
+    throw new Error(
+      `seedTalk: missing expected field(s) [${missing.join(", ")}] in output:\n${output}`
+    );
+  }
+  return result;
 }
 
 function fetchApiKey(email) {

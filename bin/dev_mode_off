@@ -9,8 +9,12 @@ sed -i '' 's/^const DEV_MODE = true;/const DEV_MODE = false;/' \
   "$ROOT/background/background.js" \
   "$ROOT/popup/popup.js"
 
-# Remove localhost from host_permissions in manifest.json
-sed -i '' '/localhost/d' "$ROOT/manifest.json"
+# Remove localhost from host_permissions in manifest.json. Match the
+# specific host_permissions line we own, not a bare "localhost" substring —
+# the e2e fixture server adds its own "localhost:<port>" entry to
+# content_scripts.matches on the same line as the production match pattern,
+# and a bare substring match would delete that entire matches line too.
+sed -i '' '\|"http://localhost:4000/\*"|d' "$ROOT/manifest.json"
 # Clean up trailing comma left on the speechwave.live line if present
 sed -i '' 's|"https://speechwave.live/\*",|"https://speechwave.live/*"|' \
   "$ROOT/manifest.json"

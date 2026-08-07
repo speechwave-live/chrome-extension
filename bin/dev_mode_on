@@ -9,8 +9,12 @@ sed -i '' 's/^const DEV_MODE = false;/const DEV_MODE = true;/' \
   "$ROOT/background/background.js" \
   "$ROOT/popup/popup.js"
 
-# Add localhost to host_permissions in manifest.json if not already present
-if ! grep -q "localhost" "$ROOT/manifest.json"; then
+# Add localhost to host_permissions in manifest.json if not already present.
+# Match the specific host_permissions string we own, not a bare "localhost"
+# substring — the e2e fixture server also adds a "localhost:<port>" entry to
+# content_scripts.matches, and a bare substring match would false-positive
+# on that and skip adding our host_permissions entry.
+if ! grep -qF '"http://localhost:4000/*"' "$ROOT/manifest.json"; then
   sed -i '' 's|"https://speechwave.live/\*"|"https://speechwave.live/*",\n    "http://localhost:4000/*"|' \
     "$ROOT/manifest.json"
 fi
