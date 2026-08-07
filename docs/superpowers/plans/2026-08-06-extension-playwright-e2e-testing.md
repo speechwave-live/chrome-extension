@@ -225,17 +225,23 @@ Run: `chmod +x bin/e2e_mode_on bin/e2e_mode_off`
 
 - [ ] **Step 4: Verify the round trip**
 
+Do not use `git stash`/`git checkout` for this — `manifest.json` may have
+unrelated uncommitted changes already, and stashing/checking it out would
+touch state this task doesn't own. Instead snapshot and restore the file
+directly with `cp`:
+
 Run:
 ```bash
-git stash push manifest.json 2>/dev/null || true   # start from a clean manifest.json
+cp manifest.json /tmp/manifest.json.before-e2e-mode-test
 bin/e2e_mode_on
 grep "localhost:8973" manifest.json
 bin/e2e_mode_on   # idempotency check
 bin/e2e_mode_off
 grep -c "localhost:8973" manifest.json || true
-git checkout -- manifest.json 2>/dev/null || true  # restore
+diff /tmp/manifest.json.before-e2e-mode-test manifest.json && echo "restored cleanly"
+rm /tmp/manifest.json.before-e2e-mode-test
 ```
-Expected: after `e2e_mode_on`, `grep` finds the line; the second `e2e_mode_on` call prints "already ON" and doesn't duplicate it; after `e2e_mode_off`, the `grep -c` finds zero matches (prints `0`, exits non-zero, hence `|| true`).
+Expected: after `e2e_mode_on`, `grep` finds the line; the second `e2e_mode_on` call prints "already ON" and doesn't duplicate it; after `e2e_mode_off`, the `grep -c` finds zero matches (prints `0`, exits non-zero, hence `|| true`); the `diff` prints nothing and `"restored cleanly"` confirms `manifest.json` is byte-for-byte back to whatever it was before this step ran (whatever that was).
 
 - [ ] **Step 5: Commit**
 
@@ -487,7 +493,7 @@ git commit -m "feat: add Playwright fixtures for loading the real extension"
 - [ ] **Step 1: Create `global-setup.js`**
 
 ```js
-const { execFileSync, execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { startFixtureServer } = require("./fixture-server");
@@ -574,11 +580,32 @@ module.exports = defineConfig({
 
 - [ ] **Step 4: Verify setup/teardown run cleanly with no tests**
 
-Precondition: `speechwave/web` pitchfork daemon stopped (`pitchfork stop speechwave/web` if currently running, to also exercise the "start it ourselves" path), and `background/background.js` has `DEV_MODE = false` (clean state).
+Do **not** stop the `speechwave/web` pitchfork daemon to test this — it may
+be a real dev daemon in active use outside this task, and stopping someone's
+live dev server as a side effect of a verification step is not this task's
+call to make. Verify against whatever state the daemon is actually in:
+
+- If `pitchfork status speechwave/web` currently shows `running`: verify the
+  "already running, don't restart" branch — after the run, confirm the same
+  `pid` is reported (`pitchfork status speechwave/web --json`), proving
+  `ensureDevServerRunning` did not touch it.
+- If it currently shows anything else: verify the "start it" branch — after
+  the run, confirm it shows `running`.
+- Either way, do not use `pitchfork stop` to force one path or the other.
+
+Also confirm, by reading `ensureDevServerRunning`'s code, that the untested
+branch (the one your current daemon state didn't exercise) is logically
+sound — this is a code-review check, not something to force by stopping a
+live daemon.
+
+For the manifest/dev-mode side: note whatever `background/background.js`'s
+`DEV_MODE` value is *before* this step (it may already be `true` from
+unrelated local work — that's fine, `ensureDevModeOn` is designed to leave
+it alone in that case).
 
 Run: `npx playwright test tests/e2e/_smoke.spec.js` — recreate the throwaway spec from Task 6 Step 2 temporarily, or run any single spec; if none exist yet, running `npx playwright test` with zero specs still executes `globalSetup`/`globalTeardown` in current Playwright versions when explicitly invoked — confirm this is the case, and if not, temporarily add back the Task 6 smoke spec for this verification, deleting it again afterward.
 
-Expected: `pitchfork status speechwave/web` becomes `running`; `manifest.json` temporarily shows `DEV_MODE = true` and the e2e fixture origin mid-run; after the run, `background/background.js` and `manifest.json` are back to their pre-run state (check with `git diff` — should be empty for tracked files other than what Task 3/7 intentionally added as new files).
+Expected: `manifest.json` temporarily shows the e2e fixture origin mid-run; `background/background.js` temporarily shows `DEV_MODE = true` mid-run; after the run, `manifest.json`'s content_scripts matches are back to their pre-run state, and `background/background.js`'s `DEV_MODE` value matches whatever it was *before* this step ran (not necessarily `false` — see above). Check with `git diff` for `manifest.json`'s `content_scripts` section specifically, since `manifest.json` may carry unrelated pre-existing uncommitted changes this task doesn't own.
 
 - [ ] **Step 5: Commit**
 
