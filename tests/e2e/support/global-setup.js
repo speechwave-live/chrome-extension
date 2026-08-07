@@ -18,6 +18,12 @@ function ensureDevServerRunning() {
   }
 
   if (!running) {
+    // Safe even on a false negative from the status check above (e.g. a transient
+    // `pitchfork status --json` failure while the daemon is actually running):
+    // `pitchfork start <id>` without `-f`/`--force` does NOT stop or restart an
+    // already-running daemon — per `pitchfork start --help`, `-f`/`--force` is
+    // required to do that ("Stop the daemon if it is already running"). Without
+    // it, `start` is a no-op/wait-for-ready against an already-running daemon.
     execFileSync("pitchfork", ["start", PITCHFORK_DAEMON], { stdio: "inherit" });
   }
 }
