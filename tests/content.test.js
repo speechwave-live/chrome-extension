@@ -291,6 +291,15 @@ describe("remote config", () => {
 });
 
 describe("RENDER_EMOJI message", () => {
+  test("emoji span has the floating-emoji class", () => {
+    const { messageHandler } = loadContent();
+
+    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+
+    const span = document.getElementById("speechwave-overlay").querySelector("span");
+    expect(span.className).toBe("floating-emoji");
+  });
+
   test("appends emoji span to the overlay", () => {
     const { messageHandler } = loadContent();
 

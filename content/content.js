@@ -173,6 +173,7 @@ function spawnEmoji(emoji) {
   const tuning = remoteConfig.tuning;
 
   const el = document.createElement("span");
+  el.className = "floating-emoji";
   el.textContent = emoji;
   el.style.cssText = [
     "position: absolute",
