@@ -42,10 +42,7 @@ This automatically, for the duration of the run only:
 - **`reaction-overlay.spec.js`** — a real attendee tapping an emoji on
   `/t/:slug` → real Phoenix channel broadcast → the fixture page's content
   script renders a `.floating-emoji` span on `#speechwave-overlay`.
-
-## What's not covered (yet)
-
-- Slide-number detection and the fireworks animation.
-- Behavior against real Google Slides (deliberately out of scope — Google's
-  login flow actively blocks automated sign-in; see
-  `docs/specs/2026-08-06-extension-playwright-e2e-testing-design.md` for why).
+- **`slide-detection.spec.js`** — mutating the fixture page's `aria-label`
+  → asserts the popup's `#slide-indicator` updates to match.
+- **`fireworks.spec.js`** — triggering the dev-mode `TEST_FIREWORKS` popup
+  button → asserts a burst of spans appears on `#speechwave-overlay`.
