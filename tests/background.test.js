@@ -98,6 +98,10 @@ function loadBackground({
     callback(apiKey ? { apiKey } : {});
   });
 
+  chrome.runtime.getManifest.mockReturnValue({
+    content_scripts: [{ matches: ["https://docs.google.com/presentation/*"] }],
+  });
+
   let messageHandler;
   chrome.runtime.onMessage.addListener.mockImplementation((handler) => {
     messageHandler = handler;
@@ -333,6 +337,25 @@ describe("remote config from channel join", () => {
     mockChannel.joinReceiveHandlers["ok"]({});
 
     expect(sendResponse).toHaveBeenCalledWith({ connected: true });
+  });
+
+  test("queries tabs using the manifest's content_scripts match patterns, not a hardcoded URL", () => {
+    const { messageHandler } = loadBackground();
+
+    chrome.tabs.query.mockImplementation((_query, callback) => {
+      callback([{ id: 5 }]);
+    });
+
+    messageHandler({ type: "SET_SLUG", slug: "talk", apiKey: "key" }, {}, jest.fn());
+    mockChannel.joinReceiveHandlers["ok"]({
+      settings: { overlay_size_percent: 35, fireworks_enabled: false },
+      tuning: { min_overlay_size_percent: 10 },
+    });
+
+    expect(chrome.tabs.query).toHaveBeenCalledWith(
+      { url: ["https://docs.google.com/presentation/*"] },
+      expect.any(Function)
+    );
   });
 });
 

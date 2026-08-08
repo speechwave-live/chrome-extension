@@ -36,7 +36,8 @@ function debug(...args) {
  * Errors per-tab (e.g. no listener) are suppressed.
  */
 function broadcastToSlidesTabs(msg) {
-  chrome.tabs.query({ url: 'https://docs.google.com/presentation/*' }, (tabs) => {
+  const { matches } = chrome.runtime.getManifest().content_scripts[0];
+  chrome.tabs.query({ url: matches }, (tabs) => {
     for (const tab of tabs) {
       chrome.tabs.sendMessage(tab.id, msg, () => {
         void chrome.runtime.lastError; // suppress "no listener" errors

@@ -5,6 +5,9 @@ global.chrome = {
       addListener: jest.fn(),
     },
     lastError: null,
+    getManifest: jest.fn(() => ({
+      content_scripts: [{ matches: ["https://docs.google.com/presentation/*"] }],
+    })),
   },
   storage: {
     sync: {
