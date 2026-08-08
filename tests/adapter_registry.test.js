@@ -40,4 +40,14 @@ describe("adapter registry", () => {
     expect(adapter.getSlide()).toBe(4);
     document.body.innerHTML = "";
   });
+
+  test("falls back to slide 0 if chrome.runtime.getManifest() throws", () => {
+    chrome.runtime.getManifest.mockImplementationOnce(() => {
+      throw new Error("Extension context invalidated.");
+    });
+
+    const adapter = getAdapter("https://docs.google.com/presentation/d/abc123/edit");
+
+    expect(adapter.getSlide()).toBe(0);
+  });
 });
