@@ -2,6 +2,10 @@
 description = "Run the Jest suite"
 run = "npm test"
 
+[tasks.test_e2e]
+description = "Run the Playwright e2e suite (not CI-gated; requires ../speechwave checked out)"
+run = "npm run test:e2e"
+
 [tasks.dev_on]
 description = "Turn on dev mode"
 run = "bin/dev_mode_on"
