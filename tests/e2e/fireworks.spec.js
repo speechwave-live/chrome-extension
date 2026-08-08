@@ -1,27 +1,15 @@
 const { test, expect } = require("./support/extension-fixtures");
-const { seedTalk, fetchApiKey, cleanupTestUser } = require("./support/speechwave");
-const { connectViaPopup } = require("./support/popup");
 const { openFixturePage } = require("./support/fixture");
-
-let email;
-let talkSlug;
-
-test.beforeAll(() => {
-  email = `manual-test-${Date.now()}@example.com`;
-  const seeded = seedTalk(email);
-  talkSlug = seeded.talk_slug;
-});
-
-test.afterAll(() => {
-  cleanupTestUser();
-});
 
 test("triggering TEST_FIREWORKS from the popup bursts spans onto the fixture page's overlay", async ({
   context,
   extensionId,
 }) => {
-  const apiKey = fetchApiKey(email);
-  const popup = await connectViaPopup(context, extensionId, apiKey, talkSlug);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+  await popup.locator("#api-key-input").fill("a".repeat(64));
+  await popup.locator("#save-api-key-btn").click();
+  await expect(popup.locator("#main-section")).toBeVisible();
 
   const fixturePage = await openFixturePage(context);
 
