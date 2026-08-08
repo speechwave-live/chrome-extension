@@ -78,10 +78,9 @@ Different presentation tools expose the current slide number differently, so the
 
 ```javascript
 function getAdapter(url) {
-  if (url.includes("docs.google.com/presentation")) {
-    return GoogleSlidesAdapter;
-  }
-  return { getSlide: () => 0 };  // fallback for unknown platforms
+  const { matches } = chrome.runtime.getManifest().content_scripts[0];
+  const isContentScriptUrl = matches.some((pattern) => url.startsWith(pattern.replace(/\*$/, "")));
+  return isContentScriptUrl ? GoogleSlidesAdapter : { getSlide: () => 0 };
 }
 ```
 
@@ -89,10 +88,10 @@ The Google Slides adapter (`adapters/google_slides.js`) reads the slide number f
 
 ```javascript
 function getSlide() {
-  const input = document.querySelector('input[aria-label*="Slide"]');
-  if (!input) return 0;
-  const n = parseInt(input.value, 10);
-  return isNaN(n) ? 0 : n;
+  const el = document.querySelector('.punch-viewer-svgpage-a11yelement[aria-label*="Slide"]');
+  if (!el) return 0;
+  const match = el.getAttribute("aria-label").match(/^Slide (\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
 }
 ```
 

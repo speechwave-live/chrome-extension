@@ -46,3 +46,10 @@ This automatically, for the duration of the run only:
   → asserts the popup's `#slide-indicator` updates to match.
 - **`fireworks.spec.js`** — triggering the dev-mode `TEST_FIREWORKS` popup
   button → asserts a burst of spans appears on `#speechwave-overlay`.
+
+## Deliberately out of scope
+
+- Behavior against real Google Slides — Google's login flow actively
+  blocks automated sign-in, so there's no automated way to verify this;
+  see `docs/specs/2026-08-06-extension-playwright-e2e-testing-design.md`
+  for the full reasoning.
