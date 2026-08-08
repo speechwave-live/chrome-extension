@@ -25,4 +25,19 @@ describe("adapter registry", () => {
     const adapter = getAdapter("https://slides.com/user/deck");
     expect(adapter.getSlide()).toBe(0);
   });
+
+  test("resolves URLs matched only via a patched manifest (e.g. e2e fixture origin)", () => {
+    chrome.runtime.getManifest.mockReturnValueOnce({
+      content_scripts: [
+        { matches: ["https://docs.google.com/presentation/*", "http://localhost:8973/*"] },
+      ],
+    });
+    document.body.innerHTML =
+      '<div class="punch-viewer-svgpage-a11yelement" aria-label="Slide 4 of 10: Title text"></div>';
+
+    const adapter = getAdapter("http://localhost:8973/");
+
+    expect(adapter.getSlide()).toBe(4);
+    document.body.innerHTML = "";
+  });
 });
