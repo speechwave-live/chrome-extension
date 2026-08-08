@@ -1,18 +1,8 @@
 const { test, expect } = require("./support/extension-fixtures");
-const { seedTalk, fetchApiKey, cleanupTestUser } = require("./support/speechwave");
+const { fetchApiKey } = require("./support/speechwave");
+const { seedTalkForSuite } = require("./support/seed");
 
-let email;
-let talkSlug;
-
-test.beforeAll(() => {
-  email = `manual-test-${Date.now()}@example.com`;
-  const seeded = seedTalk(email);
-  talkSlug = seeded.talk_slug;
-});
-
-test.afterAll(() => {
-  cleanupTestUser();
-});
+const seeded = seedTalkForSuite();
 
 test("supplying an API key and connecting to a talk reaches a real channel join", async ({
   context,
@@ -24,14 +14,14 @@ test("supplying an API key and connecting to a talk reaches a real channel join"
   await expect(popup.locator("#setup-section")).toBeVisible();
   await expect(popup.locator("#main-section")).toBeHidden();
 
-  const apiKey = fetchApiKey(email);
+  const apiKey = fetchApiKey(seeded.email);
   await popup.locator("#api-key-input").fill(apiKey);
   await popup.locator("#save-api-key-btn").click();
 
   await expect(popup.locator("#main-section")).toBeVisible();
   await expect(popup.locator("#setup-section")).toBeHidden();
 
-  await popup.locator("#slug-input").fill(talkSlug);
+  await popup.locator("#slug-input").fill(seeded.talkSlug);
   await popup.locator("#connect-btn").click();
 
   await expect(popup.locator("#dot")).toHaveClass(/connected/);

@@ -1,27 +1,17 @@
 const { test, expect } = require("./support/extension-fixtures");
-const { seedTalk, fetchApiKey, cleanupTestUser } = require("./support/speechwave");
+const { fetchApiKey } = require("./support/speechwave");
 const { connectViaPopup } = require("./support/popup");
 const { openFixturePage } = require("./support/fixture");
+const { seedTalkForSuite } = require("./support/seed");
 
-let email;
-let talkSlug;
-
-test.beforeAll(() => {
-  email = `manual-test-${Date.now()}@example.com`;
-  const seeded = seedTalk(email);
-  talkSlug = seeded.talk_slug;
-});
-
-test.afterAll(() => {
-  cleanupTestUser();
-});
+const seeded = seedTalkForSuite();
 
 test("mutating the fixture page's aria-label updates the popup's slide indicator", async ({
   context,
   extensionId,
 }) => {
-  const apiKey = fetchApiKey(email);
-  const popup = await connectViaPopup(context, extensionId, apiKey, talkSlug);
+  const apiKey = fetchApiKey(seeded.email);
+  const popup = await connectViaPopup(context, extensionId, apiKey, seeded.talkSlug);
 
   const fixturePage = await openFixturePage(context);
 
