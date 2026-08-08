@@ -1,7 +1,7 @@
 const { test, expect } = require("./support/extension-fixtures");
 const { seedTalk, fetchApiKey, cleanupTestUser } = require("./support/speechwave");
 const { connectViaPopup } = require("./support/popup");
-const { FIXTURE_PORT } = require("./support/constants");
+const { openFixturePage } = require("./support/fixture");
 
 let email;
 let talkSlug;
@@ -23,9 +23,7 @@ test("a real attendee reaction reaches the fixture page's overlay via a live cha
   const apiKey = fetchApiKey(email);
   await connectViaPopup(context, extensionId, apiKey, talkSlug);
 
-  const fixturePage = await context.newPage();
-  await fixturePage.goto(`http://localhost:${FIXTURE_PORT}/`);
-  await expect(fixturePage.locator("#speechwave-overlay")).toBeVisible();
+  const fixturePage = await openFixturePage(context);
 
   const attendeePage = await context.newPage();
   await attendeePage.goto(`http://localhost:4000/t/${talkSlug}`);
