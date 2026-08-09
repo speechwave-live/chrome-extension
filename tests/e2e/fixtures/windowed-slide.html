@@ -23,5 +23,14 @@
        content.js fell back to it instead of the slide's own rect (see
        getSlideRect in content/content.js). -->
   <iframe class="punch-present-iframe" src="/slide-frame.html"></iframe>
+
+  <!-- Routed through a real button + Playwright .click() (not
+       page.evaluate()) so Chrome recognizes the resulting
+       requestFullscreen() call as user-activated — the Fullscreen API
+       rejects calls made without transient user activation. -->
+  <button
+    id="request-fullscreen-btn"
+    onclick="document.querySelector('iframe.punch-present-iframe').requestFullscreen()"
+  >Fullscreen</button>
 </body>
 </html>
