@@ -50,6 +50,10 @@ This automatically, for the duration of the run only:
   iframe (simulating Google Slides windowed present mode) → asserts
   `#speechwave-overlay` anchors to the visible slide's rect, not the
   iframe's outer rect.
+- **`overlay-fullscreen-position.spec.js`** — triggering
+  `requestFullscreen()` on the fixture's presentation container → asserts
+  the overlay is reparented into `document.fullscreenElement` and its
+  position doesn't shift.
 
 ## Deliberately out of scope
 
@@ -57,19 +61,3 @@ This automatically, for the duration of the run only:
   blocks automated sign-in, so there's no automated way to verify this;
   see `docs/specs/2026-08-06-extension-playwright-e2e-testing-design.md`
   for the full reasoning.
-- **Fullscreen overlay reparenting** (`content.js`'s `fullscreenchange`
-  listener, which moves `#speechwave-overlay` into
-  `document.fullscreenElement` so it stays visible above Google Slides'
-  present-mode iframe) — not automated because driving and measuring it
-  through Playwright/Chromium's fullscreen top-layer proved unreliable in
-  practice: `locator().boundingBox()` returns `null` for elements inside
-  the fullscreen top layer, and even after switching to
-  `getBoundingClientRect()` via `page.evaluate()`, the reparented overlay
-  consistently rendered at `(0, 0)` because the fixture's
-  `iframe.requestFullscreen()` target doesn't render light-DOM children
-  appended into it (an `<iframe>` element only paints its own nested
-  browsing context). Verify manually instead: open the fixture, click the
-  "Fullscreen" button (`#request-fullscreen-btn` in
-  `tests/e2e/fixtures/windowed-slide.html`), and confirm
-  `#speechwave-overlay` stays visible and correctly positioned over the
-  slide.

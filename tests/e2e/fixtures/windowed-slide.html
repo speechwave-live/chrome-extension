@@ -5,12 +5,16 @@
   <title>Speechwave e2e fixture — windowed present mode stand-in</title>
   <style>
     body { margin: 0; }
-    iframe.punch-present-iframe {
+    #present-container {
       position: absolute;
       left: 100px;
       top: 50px;
       width: 800px;
       height: 450px;
+    }
+    iframe.punch-present-iframe {
+      width: 100%;
+      height: 100%;
       border: 0;
     }
   </style>
@@ -21,8 +25,23 @@
        positioned flush to the iframe's top-left, leaving a 40px bar down
        the right side that the iframe's own rect would wrongly include if
        content.js fell back to it instead of the slide's own rect (see
-       getSlideRect in content/content.js). -->
-  <iframe class="punch-present-iframe" src="/slide-frame.html"></iframe>
+       getSlideRect in content/content.js).
+
+       The iframe is wrapped in #present-container (which carries the
+       position/size instead of the iframe itself) so the fullscreen button
+       below can fullscreen the *container*, not the bare iframe. An
+       <iframe> element never renders light-DOM children appended into it —
+       only its own nested browsing context paints — so content.js's
+       fullscreenchange listener, which reparents #speechwave-overlay into
+       whatever document.fullscreenElement currently is, would append the
+       overlay into a dead end if that were the iframe. A real presentation
+       app that needs to composite its own fullscreen UI (controls, slide
+       counter, exit button, and here, our overlay) over the slide has the
+       same constraint and so must fullscreen a wrapping element instead —
+       this container stands in for that. -->
+  <div id="present-container">
+    <iframe class="punch-present-iframe" src="/slide-frame.html"></iframe>
+  </div>
 
   <!-- Routed through a real button + Playwright .click() (not
        page.evaluate()) so Chrome recognizes the resulting
@@ -30,7 +49,7 @@
        rejects calls made without transient user activation. -->
   <button
     id="request-fullscreen-btn"
-    onclick="document.querySelector('iframe.punch-present-iframe').requestFullscreen()"
+    onclick="document.getElementById('present-container').requestFullscreen()"
   >Fullscreen</button>
 </body>
 </html>
