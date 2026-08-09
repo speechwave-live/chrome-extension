@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Speechwave e2e fixture — windowed present mode stand-in</title>
+  <style>
+    body { margin: 0; }
+    iframe.punch-present-iframe {
+      position: absolute;
+      left: 100px;
+      top: 50px;
+      width: 800px;
+      height: 450px;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Mimics Google Slides windowed present mode: the presentation iframe
+       (800x450) letterboxes a narrower slide (760x450, see slide-frame.html)
+       positioned flush to the iframe's top-left, leaving a 40px bar down
+       the right side that the iframe's own rect would wrongly include if
+       content.js fell back to it instead of the slide's own rect (see
+       getSlideRect in content/content.js). -->
+  <iframe class="punch-present-iframe" src="/slide-frame.html"></iframe>
+</body>
+</html>
