@@ -54,6 +54,13 @@ This automatically, for the duration of the run only:
   `requestFullscreen()` on the fixture's presentation container → asserts
   the overlay is reparented into `document.fullscreenElement` and its
   position doesn't shift.
+- **`capture-script-sanity.spec.js`** — injects
+  `docs/manual_tests/capture_real_google_slides_dom.js` into the local
+  fixture page and asserts `window.captureGoogleSlidesDom()` reports the
+  fixture's known DOM facts correctly, both windowed and after
+  `requestFullscreen()`. This checks the capture script's own correctness
+  against a controlled fixture — it says nothing about real Google Slides;
+  that's what the manual procedure below verifies.
 
 ## Deliberately out of scope
 
@@ -84,15 +91,31 @@ login-flow blocker as everything else in "Deliberately out of scope" above
 — so this is a manual procedure:
 
 1. Open a real Google Slides presentation you own, start Present
-   (windowed, not fullscreen).
-2. Open DevTools console, paste the contents of
-   `docs/manual_tests/capture_real_google_slides_dom.js`, run it.
+   (windowed, not fullscreen). Prefer a throwaway/non-sensitive deck if
+   you have one — the capture includes the presentation's real document
+   ID (`url`) and real slide title text (`a11yElement.ariaLabel`), and
+   captures get committed to git (see steps 3/4). If you must use a
+   sensitive deck, redact `url` and `ariaLabel` in the saved JSON before
+   committing.
+2. Open DevTools console. The first time in a given browser profile,
+   Chrome requires typing `allow pasting` and pressing Enter before it
+   will accept pasted code — do that first if your paste appears to do
+   nothing. Then paste the contents of
+   `docs/manual_tests/capture_real_google_slides_dom.js` and run it.
 3. Run `copy(result)` in the console, then save the clipboard contents as
    `docs/manual_tests/captures/YYYY-MM-DD-windowed.json` (create the
    `captures/` directory if it doesn't exist yet).
-4. Enter fullscreen present mode, re-run the same script (paste it again
-   — DevTools doesn't persist state across a fullscreen transition), and
-   save as `docs/manual_tests/captures/YYYY-MM-DD-fullscreen.json`.
+4. Before entering fullscreen: if DevTools is docked (attached to the
+   browser window), undock it into a separate window first (the "..."
+   menu in DevTools → Dock side → undock icon). Docked DevTools becomes
+   unusable once the page goes fullscreen, so you won't be able to
+   interact with the console at all in this step otherwise. Then enter
+   fullscreen present mode and re-invoke the capture — the Fullscreen API
+   doesn't reload the page, so JS state (including
+   `captureGoogleSlidesDom`) persists across the transition; you don't
+   need to re-paste the script, just run `captureGoogleSlidesDom()` again
+   (or `copy(captureGoogleSlidesDom())` directly). Save as
+   `docs/manual_tests/captures/YYYY-MM-DD-fullscreen.json`.
 5. Hand both files to Claude in a normal conversation and ask it to
    compare them against `docs/google_slides_dom_assumptions.md` — report
    each assumption as confirmed, contradicted, or inconclusive (element

@@ -7,6 +7,12 @@
 // docs/manual_tests/captures/YYYY-MM-DD-<windowed|fullscreen>.json — see
 // docs/manual_tests.md's "Verifying fixture assumptions against real
 // Google Slides" section for the full procedure.
+//
+// NOTE: tests/e2e/capture-script-sanity.spec.js calls
+// window.captureGoogleSlidesDom() directly after injecting this file via a
+// classic <script> tag, so captureGoogleSlidesDom must stay a top-level
+// `function` declaration — not wrapped in an IIFE, not a `const`/arrow
+// function — or it won't attach to `window` and that test will fail.
 function captureGoogleSlidesDom() {
   function findA11yElement() {
     const candidates = [{ doc: document, hostIframeClassName: null }];
@@ -28,7 +34,11 @@ function captureGoogleSlidesDom() {
         return {
           found: true,
           ariaLabel: el.getAttribute("aria-label"),
-          className: el.className,
+          // getAttribute, not .className: if el is an SVG element,
+          // .className returns an SVGAnimatedString, not a plain string,
+          // and JSON-serializing it (via copy(result)) silently produces
+          // {} instead of the real class list.
+          className: el.getAttribute("class"),
           hostIframeClassName,
         };
       }
@@ -44,7 +54,8 @@ function captureGoogleSlidesDom() {
     const rect = iframe.getBoundingClientRect();
     return {
       found: true,
-      className: iframe.className,
+      // getAttribute, not .className — see note in findA11yElement.
+      className: iframe.getAttribute("class"),
       rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
     };
   }
@@ -80,7 +91,10 @@ function captureGoogleSlidesDom() {
     return {
       active: true,
       fullscreenElementTagName: el.tagName,
-      fullscreenElementClassName: el.className,
+      // getAttribute, not .className — see note in findA11yElement. The
+      // fullscreen element is exactly the kind of element (a wrapping SVG
+      // container) this bug bites in practice.
+      fullscreenElementClassName: el.getAttribute("class"),
       fullscreenElementIsPresentIframe: presentIframe ? el === presentIframe : null,
       fullscreenElementContainsPresentIframe: presentIframe ? el.contains(presentIframe) : null,
     };
