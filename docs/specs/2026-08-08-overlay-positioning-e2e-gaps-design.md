@@ -128,11 +128,32 @@ Same fixture (`/windowed-slide.html`).
 **Risk/fallback:** fullscreen automation in Playwright/headless-adjacent
 Chrome configurations has historically been finicky. The context here does
 launch `headless: false` (real Chrome), which reduces but doesn't eliminate
-risk. If a real implementation attempt shows this is unreliable (flaky
-across runs, not just a one-off environment hiccup), the fallback is to drop
-the automated spec and instead document this as a manual-test case in
-`docs/manual_tests.md`, rather than ship a flaky test — this will be decided
-during implementation, not preemptively.
+risk. If flakiness shows up during implementation, escalate in this order
+rather than reaching straight for retries or dropping the spec:
+
+1. **Fix the wait condition first.** Most Playwright flakiness is a fixed
+   delay standing in for a real wait — confirm the test waits on the actual
+   `fullscreenchange` event / polls `document.fullscreenElement`, not a
+   `setTimeout`. This alone resolves most apparent flakiness and isn't a
+   compromise on rigor.
+2. **If still occasionally flaky after that**, scope Playwright's built-in
+   `retries` to just this spec file rather than hand-rolling a "retry N
+   times, pass if any attempt succeeds" loop. A test that fails once and
+   passes on retry then reports as **flaky** in Playwright's output, not a
+   clean pass — that distinction matters, because it keeps the instability
+   visible instead of silently laundering it into green. This is only
+   appropriate if the flakiness looks environment-driven (e.g. the
+   fullscreen transition itself occasionally hiccups) — if failures instead
+   point at the reparenting logic or overlay position being wrong on some
+   runs, that's a real intermittent bug the test is correctly catching, and
+   retrying would hide exactly the thing this spec exists to find.
+3. **If it's still unreliable (or fails outright, every run) after both**,
+   drop the automated spec and document this as a manual-test case in
+   `docs/manual_tests.md` instead of shipping a flaky or permanently-red
+   test.
+
+This will be worked through during implementation, not decided
+preemptively.
 
 ## Backlog (not implemented this round)
 
