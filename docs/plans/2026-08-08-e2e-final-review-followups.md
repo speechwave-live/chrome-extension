@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Address all seven Minor findings from the final whole-branch
-review of `docs/superpowers/plans/2026-08-08-remaining-e2e-deferred-items.md`
+review of `docs/plans/2026-08-08-remaining-e2e-deferred-items.md`
 (already merged to `main`, no Critical/Important findings, nothing broken —
 this is cleanup, not a bug fix).
 
@@ -264,7 +264,7 @@ Expected: PASS. This is a regression check — the spec asserted the same
 thing before this change; only its setup path changed.
 
 If it fails on the first run, re-run once before investigating (see prior
-e2e troubleshooting notes in `docs/superpowers/plans/2026-08-07-reaction-overlay-e2e.md`
+e2e troubleshooting notes in `docs/plans/2026-08-07-reaction-overlay-e2e.md`
 Task 3 Step 3 — same general approach applies). If it's still failing,
 check specifically whether `#main-section` actually becomes visible after
 saving the dummy key (it should — this doesn't depend on any backend

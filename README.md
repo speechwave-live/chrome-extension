@@ -78,9 +78,13 @@ Different presentation tools expose the current slide number differently, so the
 
 ```javascript
 function getAdapter(url) {
-  const { matches } = chrome.runtime.getManifest().content_scripts[0];
-  const isContentScriptUrl = matches.some((pattern) => url.startsWith(pattern.replace(/\*$/, "")));
-  return isContentScriptUrl ? GoogleSlidesAdapter : { getSlide: () => 0 };
+  try {
+    const { matches } = chrome.runtime.getManifest().content_scripts[0];
+    const isContentScriptUrl = matches.some((pattern) => url.startsWith(pattern.replace(/\*$/, "")));
+    return isContentScriptUrl ? GOOGLE_SLIDES_ADAPTER : { getSlide: () => 0 };
+  } catch {
+    return { getSlide: () => 0 }; // e.g. extension context invalidated
+  }
 }
 ```
 
@@ -97,7 +101,7 @@ function getSlide() {
 
 This is brittle by nature since Google could change the DOM, but it's the only option without a first-party API. The fixture based Jest tests in `tests/` snapshot the relevant DOM so regressions get caught before they ship. If Google changes the DOM, update `tests/fixtures/google_slides_dom.html` and the selector in `adapters/google_slides.js`.
 
-The content script polls the adapter every 500ms via `setInterval`. When the slide number changes, it sends a `SLIDE_CHANGED` message to the service worker, which pushes `slide_changed` to the server channel and notifies the popup. Slide `0` is a sentinel for "unknown" and is never sent, so the content script only reports changes to non-zero slide numbers. The popup displays the current slide number in real time ("Slide 3" or "Slide --" for unknown), which serves as an immediate sanity check that the adapter is reading the DOM correctly.
+The content script polls the adapter every 500ms via `setInterval`. When the slide number changes — including a change back to `0`, e.g. leaving the slideshow — it sends a `SLIDE_CHANGED` message to the service worker, which pushes `slide_changed` to the server channel and notifies the popup. Slide `0` is the sentinel for "unknown," not a value that's filtered out of the broadcast. The popup displays the current slide number in real time ("Slide 3" or "Slide --" for unknown), which serves as an immediate sanity check that the adapter is reading the DOM correctly.
 
 ### Troubleshooting
 

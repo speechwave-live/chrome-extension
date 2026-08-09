@@ -227,7 +227,7 @@ red/green TDD cycle here; the spec itself is the test, and running it
 against the live speechwave dev server is the verification.
 
 If it fails, re-run once before investigating (see
-`docs/superpowers/plans/2026-08-07-reaction-overlay-e2e.md` Task 3 Step 3
+`docs/plans/2026-08-07-reaction-overlay-e2e.md` Task 3 Step 3
 for the general e2e troubleshooting notes — same applies here).
 
 - [ ] **Step 4: Commit**

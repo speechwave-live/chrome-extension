@@ -18,8 +18,11 @@ const GOOGLE_SLIDES_ADAPTER = {
 // equivalent to real match-pattern semantics for this codebase's needs.
 // Wrapped in try/catch because chrome.runtime.getManifest() can throw if the
 // extension context is invalidated (e.g. reloaded while this content script
-// is still running) — fall back to the null adapter rather than letting the
-// throw abort the rest of content.js's module body.
+// is still running). Falls back to the null adapter rather than letting the
+// throw itself propagate out of getAdapter — doesn't guarantee anything else
+// in content.js still works afterward (a truly invalidated context will
+// likely fail the next chrome.runtime call too), just that this call won't
+// be the one that aborts the module body.
 function getAdapter(url) {
   try {
     const { matches } = chrome.runtime.getManifest().content_scripts[0];

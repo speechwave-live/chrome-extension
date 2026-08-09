@@ -5,7 +5,7 @@
 
 ## Summary
 
-The final whole-branch review of `docs/superpowers/plans/2026-08-08-remaining-e2e-deferred-items.md`
+The final whole-branch review of `docs/plans/2026-08-08-remaining-e2e-deferred-items.md`
 (merged to `main`) came back clean — no Critical or Important findings — but
 surfaced seven Minor findings. This picks up all seven. None were blocking,
 so this is cleanup, not a fix for broken behavior; each item below is
