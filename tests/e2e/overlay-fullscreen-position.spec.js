@@ -32,8 +32,10 @@ test("overlay stays correctly positioned after Google Slides fullscreen present 
   // never recomputes syncOverlayPosition. Entering the browser's top layer
   // must not change what position:fixed resolves against, or the overlay
   // would visibly jump the instant present mode goes fullscreen (see the
-  // OVERLAY_MAX_Z_INDEX comment in content.js:6-10 about why fullscreen
-  // needs this reparenting in the first place).
+  // README.md's "Fullscreen overlay" section for the stacking context
+  // explanation of why this reparenting is necessary).
   expect(afterBox.x).toBeCloseTo(beforeBox.x, 0);
   expect(afterBox.y).toBeCloseTo(beforeBox.y, 0);
+  expect(afterBox.width).toBeCloseTo(beforeBox.width, 0);
+  expect(afterBox.height).toBeCloseTo(beforeBox.height, 0);
 });

@@ -61,3 +61,15 @@ This automatically, for the duration of the run only:
   blocks automated sign-in, so there's no automated way to verify this;
   see `docs/specs/2026-08-06-extension-playwright-e2e-testing-design.md`
   for the full reasoning.
+- Confirming what real Google Slides actually fullscreens (the bare
+  `iframe.punch-present-iframe`, or a wrapping element) — this repo's e2e
+  fixture simulates a wrapper (`#present-container` in
+  `tests/e2e/fixtures/windowed-slide.html`) because `content.js`'s
+  `fullscreenchange` listener appends the overlay into whatever
+  `document.fullscreenElement` is, and an `<iframe>` element never renders
+  light-DOM children appended to it — so if real Google Slides ever
+  fullscreens the bare iframe rather than a wrapper, the overlay would
+  silently fail to render in fullscreen present mode. Needs one manual
+  check against real Google Slides to confirm which it is; this is a
+  pre-existing `content.js` behavior, not something introduced by this
+  branch, and out of scope to fix here.
