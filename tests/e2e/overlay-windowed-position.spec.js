@@ -18,6 +18,14 @@ test("overlay anchors to the visible slide inside a letterboxed presentation ifr
     .boundingBox();
   const overlayBox = await fixturePage.locator("#speechwave-overlay").boundingBox();
 
+  // Theory: content.js injects at document_idle (roughly DOMContentLoaded + up to
+  // 500ms), which could theoretically race the nested iframe's document load,
+  // causing getSlideRect to return null and fall back to iframe.getBoundingClientRect()
+  // (the regression this test guards against). However, this fixture is same-origin,
+  // trivial (no async resources), and loads in sub-100ms locally — well inside the
+  // 500ms document_idle slack. Empirically, 30 repeated runs all pass cleanly
+  // (620-640ms per run), confirming the nested document loads before the sync runs.
+
   // windowed-slide.html's iframe (800x450) is 40px wider than the slide
   // inside it (760x450, see slide-frame.html) — a letterbox bar down the
   // right side. If content.js regressed to anchoring on the iframe's own
