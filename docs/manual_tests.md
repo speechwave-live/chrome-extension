@@ -73,3 +73,35 @@ This automatically, for the duration of the run only:
   check against real Google Slides to confirm which it is; this is a
   pre-existing `content.js` behavior, not something introduced by this
   branch, and out of scope to fix here.
+
+## Verifying fixture assumptions against real Google Slides
+
+The e2e fixtures (`tests/e2e/fixtures/windowed-slide.html`,
+`slide-frame.html`) simulate Google Slides' presentation DOM based on
+assumptions listed in `docs/google_slides_dom_assumptions.md`. Nobody has
+automated a way to check those assumptions against the real thing — same
+login-flow blocker as everything else in "Deliberately out of scope" above
+— so this is a manual procedure:
+
+1. Open a real Google Slides presentation you own, start Present
+   (windowed, not fullscreen).
+2. Open DevTools console, paste the contents of
+   `docs/manual_tests/capture_real_google_slides_dom.js`, run it.
+3. Run `copy(result)` in the console, then save the clipboard contents as
+   `docs/manual_tests/captures/YYYY-MM-DD-windowed.json` (create the
+   `captures/` directory if it doesn't exist yet).
+4. Enter fullscreen present mode, re-run the same script (paste it again
+   — DevTools doesn't persist state across a fullscreen transition), and
+   save as `docs/manual_tests/captures/YYYY-MM-DD-fullscreen.json`.
+5. Hand both files to Claude in a normal conversation and ask it to
+   compare them against `docs/google_slides_dom_assumptions.md` — report
+   each assumption as confirmed, contradicted, or inconclusive (element
+   not found, which may mean the capture needs a different point in the
+   flow rather than that the assumption is wrong).
+6. If everything's confirmed: update the ledger's "Last verified" column
+   and add a row to its "Capture history" table. If something's
+   contradicted: that's a normal bug — fix the code/fixture, then update
+   the ledger.
+
+Captures get committed to git, so the ledger's "Last verified" claims have
+real, timestamped, diffable evidence behind them over time.

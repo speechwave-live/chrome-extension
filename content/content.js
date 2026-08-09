@@ -155,6 +155,14 @@ function getOrCreateOverlay() {
   return overlay;
 }
 
+// Assumes document.fullscreenElement is safe to appendChild into when
+// Google Slides enters fullscreen present mode — true for a wrapping
+// element, but NOT for the bare presentation iframe itself (an <iframe>
+// never renders light-DOM children appended to it). Whether real Google
+// Slides fullscreens the bare iframe or a wrapper is currently unconfirmed
+// — see docs/google_slides_dom_assumptions.md, assumption #4. If you
+// change this listener, re-run the capture-and-compare procedure in
+// docs/manual_tests.md before merging, and update that assumption's row.
 document.addEventListener("fullscreenchange", () => {
   const overlay = document.getElementById("speechwave-overlay");
   if (!overlay) return;

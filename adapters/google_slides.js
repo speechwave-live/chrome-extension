@@ -14,6 +14,11 @@
  * BRITTLE: depends on Google Slides DOM structure. When this test starts
  * failing, update the selector here and the fixture in
  * tests/fixtures/google_slides_dom.html to match the new structure.
+ *
+ * If you change this selector, also re-run the capture-and-compare
+ * procedure in docs/manual_tests.md ("Verifying fixture assumptions
+ * against real Google Slides") before merging, and update this
+ * assumption's row in docs/google_slides_dom_assumptions.md.
  */
 function getSlide() {
   const docs = [document];
