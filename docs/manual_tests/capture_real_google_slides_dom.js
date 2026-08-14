@@ -31,6 +31,7 @@ function captureGoogleSlidesDom() {
     for (const { doc, hostIframeClassName } of candidates) {
       const el = doc.querySelector('.punch-viewer-svgpage-a11yelement[aria-label*="Slide"]');
       if (el) {
+        const r = el.getBoundingClientRect();
         return {
           found: true,
           ariaLabel: el.getAttribute("aria-label"),
@@ -40,10 +41,25 @@ function captureGoogleSlidesDom() {
           // {} instead of the real class list.
           className: el.getAttribute("class"),
           hostIframeClassName,
+          // Relative to whatever document this element was actually found
+          // in: top-document coordinates if hostIframeClassName is null,
+          // otherwise coordinates relative to that iframe's own viewport
+          // (same convention as slideRectWithinIframe below). When
+          // hostIframeClassName is null, compare this against the
+          // top-level `viewport` field to check whether a present-mode
+          // flow with no punch-present-iframe is itself letterboxed by
+          // some other means, or genuinely fills the browser viewport.
+          rect: { left: r.left, top: r.top, right: r.right, bottom: r.bottom },
         };
       }
     }
-    return { found: false, ariaLabel: null, className: null, hostIframeClassName: null };
+    return {
+      found: false,
+      ariaLabel: null,
+      className: null,
+      hostIframeClassName: null,
+      rect: null,
+    };
   }
 
   function findPresentIframe() {
@@ -103,6 +119,9 @@ function captureGoogleSlidesDom() {
   return {
     capturedAt: new Date().toISOString(),
     url: window.location.href,
+    // Browser viewport size — see the comment on a11yElement.rect for why
+    // this matters when no punch-present-iframe is found at all.
+    viewport: { width: window.innerWidth, height: window.innerHeight },
     a11yElement: findA11yElement(),
     presentIframe: findPresentIframe(),
     slideRectWithinIframe: findSlideRectWithinIframe(),

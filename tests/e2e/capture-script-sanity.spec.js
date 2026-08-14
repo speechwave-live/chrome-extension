@@ -19,12 +19,19 @@ test("capture script reports correct facts against the local windowed fixture", 
 
   const before = await fixturePage.evaluate(() => window.captureGoogleSlidesDom());
 
-  expect(before.a11yElement).toEqual({
-    found: true,
-    ariaLabel: "Slide 1 of 10: Title text",
-    className: "punch-viewer-svgpage-a11yelement",
-    hostIframeClassName: "punch-present-iframe",
-  });
+  expect(before.viewport.width).toBeGreaterThan(0);
+  expect(before.viewport.height).toBeGreaterThan(0);
+  expect(before.a11yElement.found).toBe(true);
+  expect(before.a11yElement.ariaLabel).toBe("Slide 1 of 10: Title text");
+  expect(before.a11yElement.className).toBe("punch-viewer-svgpage-a11yelement");
+  expect(before.a11yElement.hostIframeClassName).toBe("punch-present-iframe");
+  // Found via the iframe path in this fixture, so a11yElement.rect should
+  // match slideRectWithinIframe exactly — both read the same element's
+  // getBoundingClientRect() relative to the same (iframe) document.
+  expect(before.a11yElement.rect.left).toBeCloseTo(0, 0);
+  expect(before.a11yElement.rect.top).toBeCloseTo(0, 0);
+  expect(before.a11yElement.rect.right).toBeCloseTo(760, 0);
+  expect(before.a11yElement.rect.bottom).toBeCloseTo(450, 0);
   expect(before.presentIframe.found).toBe(true);
   expect(before.presentIframe.className).toBe("punch-present-iframe");
   expect(before.presentIframe.rect.left).toBeCloseTo(100, 0);
