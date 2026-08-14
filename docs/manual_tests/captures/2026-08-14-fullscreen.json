@@ -1,0 +1,33 @@
+{
+    "capturedAt": "2026-08-14T19:11:21.990Z",
+    "url": "https://docs.google.com/presentation/d/17Zn5isX49zdeeMZk_-HlvnkzmVcsqNLZqahx-86bNIE/edit?slide=id.g3f71a2fba3d_0_22#slide=id.g3f71a2fba3d_0_22",
+    "a11yElement": {
+        "found": true,
+        "ariaLabel": "Slide 4 of 4: Slide Four!",
+        "className": "punch-viewer-svgpage-a11yelement",
+        "hostIframeClassName": "punch-present-iframe"
+    },
+    "presentIframe": {
+        "found": true,
+        "className": "punch-present-iframe",
+        "rect": {
+            "left": 0,
+            "top": 0,
+            "right": 1512,
+            "bottom": 949
+        }
+    },
+    "slideRectWithinIframe": {
+        "left": 0,
+        "top": 49.25,
+        "right": 1512,
+        "bottom": 900.25
+    },
+    "fullscreen": {
+        "active": true,
+        "fullscreenElementTagName": "DIV",
+        "fullscreenElementClassName": "punch-full-screen-element punch-full-window-overlay",
+        "fullscreenElementIsPresentIframe": false,
+        "fullscreenElementContainsPresentIframe": true
+    }
+}
