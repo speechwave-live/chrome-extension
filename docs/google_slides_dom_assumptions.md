@@ -20,7 +20,7 @@ capture file.**
 |---|---|---|---|---|
 | 1 | The slide-number element is `.punch-viewer-svgpage-a11yelement[aria-label*="Slide"]`, with an `aria-label` matching `/^Slide (\d+)/`, present in the top document or a same-origin iframe. | `adapters/google_slides.js:23-42` (`getSlide`) | Slide tracking silently returns `0` (the "unknown slide" sentinel) — reactions route to slide 0 server-side instead of the real current slide. | 2026-08-14 |
 | 2 | The live slideshow renders inside `iframe.punch-present-iframe`. | `content/content.js:59-61` (`getPresentIframe`) | The overlay falls back to viewport-relative sizing instead of anchoring to the slide. | **Contradicted 2026-08-14 — see "2026-08-14 findings" below** |
-| 3 | The a11y element's `getBoundingClientRect()` within the iframe's own document represents the visible slide's bounds; offsetting by the iframe's own top-document rect gives correct top-document coordinates. | `content/content.js:71-91` (`getSlideRect`) | Overlay/emoji render off-slide in windowed present mode — the exact bug `tests/e2e/overlay-windowed-position.spec.js` exists to catch. | 2026-08-14 (partial — see findings) |
+| 3 | The a11y element's `getBoundingClientRect()` within the iframe's own document represents the visible slide's bounds; offsetting by the iframe's own top-document rect gives correct top-document coordinates. | `content/content.js:71-91` (`getSlideRect`) | Overlay/emoji render off-slide in windowed present mode — the exact bug `tests/e2e/overlay-windowed-position.spec.js` exists to catch. | 2026-08-14 — sub-rect math confirmed on both axes (see findings); offset-addition step (non-zero iframe origin) still untested by any capture |
 | 4 | Whether real Google Slides fullscreens the bare `iframe.punch-present-iframe`, or a wrapping element. Confirmed: a wrapping element (`div.punch-full-screen-element.punch-full-window-overlay`), at least for the in-editor overlay present flow — see findings. | `content/content.js:166-174` (`fullscreenchange` listener) | If the bare iframe: the overlay is appended into a node that never renders light-DOM children, and silently fails to render in fullscreen present mode. | 2026-08-14 |
 
 ## Capture history
@@ -31,6 +31,7 @@ over time is visible without digging through git blame.
 | Date | Capture files | Result |
 |---|---|---|
 | 2026-08-14 | `docs/manual_tests/captures/2026-08-14-windowed.json`, `2026-08-14-fullscreen.json` | #1 confirmed. #2 contradicted for the dedicated `/present`-tab flow (no `punch-present-iframe` found at all). #3 confirmed for the flow where the iframe exists (letterbox sub-rect observed), not stress-tested for the offset arithmetic specifically. #4 confirmed for the flow where the iframe exists. See findings below — the two captures turned out to be from two structurally different Slides present-mode flows, not the same flow in two states. |
+| 2026-08-14 | `docs/manual_tests/captures/2026-08-14-windowed-2.json`, `2026-08-14-fullscreen-2.json` | Both from the in-editor overlay flow (same flow as the first `fullscreen.json`, not the `/present`-tab flow) — one non-fullscreen at a narrow/tall viewport, one fullscreen at a wide viewport. #3 confirmed much more robustly: the slide sub-rect holds a clean 16:9 ratio on both axes (top/bottom bars in the narrow window, left/right bars in the wide one). Does not address #2's open question — see findings. |
 
 ## 2026-08-14 findings
 
@@ -69,3 +70,26 @@ The capture script was extended on 2026-08-14 to record `a11yElement.rect`
 `viewport` field specifically to answer this on the next capture — compare
 `a11yElement.rect` against `viewport` when `hostIframeClassName` is `null`.
 Not yet re-run against the `/present`-tab flow with the updated script.
+
+### Follow-up: `2026-08-14-windowed-2.json` / `2026-08-14-fullscreen-2.json`
+
+Both new captures are from the same `/edit?slide=...` URL as the first
+`2026-08-14-fullscreen.json` — the in-editor overlay present flow — not
+the dedicated `/present`-tab flow that raised the open question above.
+They don't resolve it, but they do strengthen #3 considerably:
+
+- `windowed-2` (671×944 viewport, not fullscreen): `slideRectWithinIframe`
+  671×377 (top/bottom bars) — aspect ratio 1.780.
+- `fullscreen-2` (2560×1080 viewport, fullscreen): `slideRectWithinIframe`
+  1920×1080 (left/right bars) — aspect ratio 1.778.
+
+Both land on the same ~16:9 ratio despite letterboxing on opposite axes at
+very different container shapes — strong confirmation that the a11y
+element's rect is genuinely tracking the visible slide, not some unrelated
+DOM artifact. Both captures' iframe rects again sit at `(0,0)`, so the
+offset-addition step remains unexercised by any capture so far.
+
+The `/present`-tab open question (assumption #2) is still open: still need
+a non-fullscreen capture with the updated script from a URL shaped like
+`.../present?token=...` (matching the original `2026-08-14-windowed.json`),
+to compare `a11yElement.rect` against `viewport` there.
