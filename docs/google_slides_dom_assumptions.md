@@ -19,7 +19,7 @@ capture file.**
 | # | Assumption | Encoded in | What breaks if wrong | Last verified |
 |---|---|---|---|---|
 | 1 | The slide-number element is `.punch-viewer-svgpage-a11yelement[aria-label*="Slide"]`, with an `aria-label` matching `/^Slide (\d+)/`, present in the top document or a same-origin iframe. | `adapters/google_slides.js:23-42` (`getSlide`) | Slide tracking silently returns `0` (the "unknown slide" sentinel) — reactions route to slide 0 server-side instead of the real current slide. | 2026-08-14 |
-| 2 | The live slideshow renders inside `iframe.punch-present-iframe`. | `content/content.js:59-61` (`getPresentIframe`) | The overlay falls back to viewport-relative sizing instead of anchoring to the slide. | **Contradicted 2026-08-14 — see "2026-08-14 findings" below** |
+| 2 | The live slideshow renders inside `iframe.punch-present-iframe`. | `content/content.js:59-61` (`getPresentIframe`) | The overlay falls back to viewport-relative sizing instead of anchoring to the slide. | 2026-08-14 — confirmed true for both reliably-reproducible present modes (fullscreen, windowed); one anomalous capture with no iframe was observed once and is not currently reproducible — see "2026-08-14 findings" |
 | 3 | The a11y element's `getBoundingClientRect()` within the iframe's own document represents the visible slide's bounds; offsetting by the iframe's own top-document rect gives correct top-document coordinates. | `content/content.js:71-91` (`getSlideRect`) | Overlay/emoji render off-slide in windowed present mode — the exact bug `tests/e2e/overlay-windowed-position.spec.js` exists to catch. | 2026-08-14 — sub-rect math confirmed on both axes (see findings); offset-addition step (non-zero iframe origin) still untested by any capture |
 | 4 | Whether real Google Slides fullscreens the bare `iframe.punch-present-iframe`, or a wrapping element. Confirmed: a wrapping element (`div.punch-full-screen-element.punch-full-window-overlay`), at least for the in-editor overlay present flow — see findings. | `content/content.js:166-174` (`fullscreenchange` listener) | If the bare iframe: the overlay is appended into a node that never renders light-DOM children, and silently fails to render in fullscreen present mode. | 2026-08-14 |
 
@@ -32,6 +32,8 @@ over time is visible without digging through git blame.
 |---|---|---|
 | 2026-08-14 | `docs/manual_tests/captures/2026-08-14-windowed.json`, `2026-08-14-fullscreen.json` | #1 confirmed. #2 contradicted for the dedicated `/present`-tab flow (no `punch-present-iframe` found at all). #3 confirmed for the flow where the iframe exists (letterbox sub-rect observed), not stress-tested for the offset arithmetic specifically. #4 confirmed for the flow where the iframe exists. See findings below — the two captures turned out to be from two structurally different Slides present-mode flows, not the same flow in two states. |
 | 2026-08-14 | `docs/manual_tests/captures/2026-08-14-windowed-2.json`, `2026-08-14-fullscreen-2.json` | Both from the in-editor overlay flow (same flow as the first `fullscreen.json`, not the `/present`-tab flow) — one non-fullscreen at a narrow/tall viewport, one fullscreen at a wide viewport. #3 confirmed much more robustly: the slide sub-rect holds a clean 16:9 ratio on both axes (top/bottom bars in the narrow window, left/right bars in the wide one). Does not address #2's open question — see findings. |
+| 2026-08-15 | `docs/manual_tests/captures/2026-08-14-windowedalt-1.json` | A previously-unvisited path ("Slideshow" menu, non-fullscreen) — same structural pattern as `windowed-2` (iframe present, letterboxed within it at ~16:9). Prompted a deliberate hunt for all reliably-reproducible present modes — see findings. |
+| 2026-08-15 | `docs/manual_tests/captures/2026-08-14-windowed-a.json`, `2026-08-14-windowed-b.json` | Two different menu paths ("uncheck fullscreen → Start slideshow" and "Presenter view") confirmed to converge on the exact same URL and DOM structure — same iframe-based pattern as `windowed-2`/`windowedalt-1`. Resolves the "3 modes" question from `windowedalt-1`: there are only 2 reliably-reproducible modes (fullscreen, windowed), both iframe-based. See findings. |
 
 ## 2026-08-14 findings
 
@@ -93,3 +95,39 @@ The `/present`-tab open question (assumption #2) is still open: still need
 a non-fullscreen capture with the updated script from a URL shaped like
 `.../present?token=...` (matching the original `2026-08-14-windowed.json`),
 to compare `a11yElement.rect` against `viewport` there.
+
+### Consolidated conclusion (2026-08-15)
+
+A deliberate search for every reliably-reproducible present-mode entry
+point turned up exactly **two**, both already covered by the code:
+
+1. **Fullscreen** — click "Present" directly. Iframe present, fullscreens
+   a wrapping `div.punch-full-screen-element.punch-full-window-overlay`
+   (assumption #4, confirmed twice: `fullscreen.json`, `fullscreen-2.json`).
+2. **Windowed** — reachable via at least two menu paths ("Slideshow" →
+   "presentation display options" → uncheck fullscreen → "Start
+   slideshow", *and* "Slideshow" → "Presenter view") that were confirmed
+   to converge on the identical URL and DOM structure
+   (`2026-08-14-windowed-a.json` / `-windowed-b.json` are byte-for-byte
+   identical apart from timestamp). Iframe present, letterboxed within it
+   (assumption #3, confirmed across five captures at three different
+   aspect ratios/orientations: `windowed-2`, `fullscreen-2`, `windowedalt-1`,
+   `windowed-a`, `windowed-b`).
+
+Both reliably-reachable modes have `iframe.punch-present-iframe` — so
+`content.js`'s existing `getPresentIframe`/`getSlideRect` handling is
+confirmed correct for everything a user can deliberately navigate to via
+the obvious "Present" UI surface.
+
+The original `2026-08-14-windowed.json` capture (`/present?token=...`,
+no iframe, top-document letterboxing — visually confirmed by
+`docs/manual_tests/captures/2026-08-14-windowed-screenshot.png`'s black
+bars) remains real evidence of a third,
+structurally different pattern, but it is **not reproducible** via either
+menu path found above, and no other path has surfaced it since. It's
+parked rather than actively chased further for now: real, but currently
+unreachable through known UI, so not scheduled for a `content.js` fix
+absent either a reliable repro or a matching production bug report. If it
+resurfaces (e.g. a user reports the overlay rendering off-slide in a
+windowed present mode), this capture and screenshot are the starting
+evidence to compare against.
