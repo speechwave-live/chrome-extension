@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Speechwave e2e fixture — edit-view stand-in</title>
+  <style>
+    body { margin: 0; }
+    #canvas-container {
+      position: absolute;
+      left: 220px;
+      top: 80px;
+      width: 800px;
+      height: 450px;
+    }
+    #canvas-container svg { width: 100%; height: 100%; }
+    #filmstrip {
+      position: absolute;
+      left: 0;
+      top: 80px;
+      width: 200px;
+    }
+    #filmstrip svg { display: block; width: 160px; height: 90px; margin: 8px auto; }
+    .hidden-menu { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Stands in for the editing canvas — see the div#canvas-container
+       hunch in docs/specs/2026-08-21-google-slides-edit-view-recon-design.md. -->
+  <div id="canvas-container">
+    <svg viewBox="0 0 800 450">
+      <g>
+        <rect width="800" height="450" fill="#fff" stroke="#000"/>
+        <text x="20" y="40">Slide content</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Stands in for the filmstrip. Each thumbnail's class stays identical
+       ("thumb") regardless of selection — only the thumb-border rect's
+       stroke changes — deliberately mirroring the "no semantic marker,
+       only a visible stroke difference" case from the design doc, so the
+       sanity test proves the recon script's computed-style capture (not
+       just class-name capture) is what would actually distinguish the
+       selected slide. -->
+  <div id="filmstrip">
+    <svg class="thumb" data-slide-index="0"><rect class="thumb-border" width="160" height="90" fill="#eee"/></svg>
+    <svg class="thumb" data-slide-index="1"><rect class="thumb-border" width="160" height="90" fill="#eee"/></svg>
+    <svg class="thumb" data-slide-index="2"><rect class="thumb-border" width="160" height="90" fill="#eee"/></svg>
+    <svg class="thumb" data-slide-index="3"><rect class="thumb-border" width="160" height="90" fill="#eee"/></svg>
+  </div>
+
+  <!-- Zero-size decoy: should never appear in a capture, proving the
+       zero-size filter works without needing to know real Slides' hidden
+       menu selectors. -->
+  <div class="hidden-menu">
+    <div><div><div><div><div>decoy</div></div></div></div></div>
+  </div>
+
+  <script>
+    function selectThumbnail(index) {
+      document.querySelectorAll("#filmstrip .thumb .thumb-border").forEach((rect, i) => {
+        if (i === index) {
+          rect.setAttribute("stroke", "#1a73e8");
+          rect.setAttribute("stroke-width", "3");
+        } else {
+          rect.setAttribute("stroke", "#ccc");
+          rect.setAttribute("stroke-width", "1");
+        }
+      });
+    }
+    window.selectThumbnail = selectThumbnail;
+    selectThumbnail(0); // slide 1 selected by default, matching a freshly opened deck
+
+    // Wide fan-out decoy: exercises the recon script's per-side child cap.
+    const wideDecoy = document.createElement("div");
+    wideDecoy.id = "wide-decoy";
+    for (let i = 0; i < 30; i++) {
+      const child = document.createElement("span");
+      child.style.cssText = "display:inline-block;width:2px;height:2px;";
+      wideDecoy.appendChild(child);
+    }
+    document.body.appendChild(wideDecoy);
+
+    // Deeply nested decoy: exercises the recon script's global depth cap.
+    const deepDecoy = document.createElement("div");
+    deepDecoy.id = "deep-decoy";
+    deepDecoy.style.cssText = "width:1px;height:1px;";
+    let cursor = deepDecoy;
+    for (let i = 0; i < 25; i++) {
+      const child = document.createElement("div");
+      child.style.cssText = "width:1px;height:1px;";
+      cursor.appendChild(child);
+      cursor = child;
+    }
+    document.body.appendChild(deepDecoy);
+  </script>
+</body>
+</html>

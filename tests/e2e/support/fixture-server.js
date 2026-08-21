@@ -8,6 +8,7 @@ const ROUTES = {
   "/": "slides.html",
   "/windowed-slide.html": "windowed-slide.html",
   "/slide-frame.html": "slide-frame.html",
+  "/edit-view.html": "edit-view.html",
 };
 
 function startFixtureServer() {

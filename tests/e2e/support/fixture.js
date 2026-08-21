@@ -15,4 +15,11 @@ async function openWindowedFixturePage(context) {
   return fixturePage;
 }
 
-module.exports = { openFixturePage, openWindowedFixturePage };
+async function openEditViewFixturePage(context) {
+  const fixturePage = await context.newPage();
+  await fixturePage.goto(`http://localhost:${FIXTURE_PORT}/edit-view.html`);
+  await expect(fixturePage.locator("#speechwave-overlay")).toBeVisible();
+  return fixturePage;
+}
+
+module.exports = { openFixturePage, openWindowedFixturePage, openEditViewFixturePage };
