@@ -128,3 +128,48 @@ login-flow blocker as everything else in "Deliberately out of scope" above
 
 Captures get committed to git, so the ledger's "Last verified" claims have
 real, timestamped, diffable evidence behind them over time.
+
+## Verifying Google Slides edit-view DOM structure
+
+Investigating support for edit-view presenting (no Present click — the
+talk happens directly on the `/edit` URL) — see
+`docs/specs/2026-08-21-google-slides-edit-view-recon-design.md`. Nobody
+has captured real edit-view DOM yet, and unlike the present-mode
+investigation, we don't have confirmed selector names to check — only
+informal leads (a `div#canvas-container` hunch for the editing canvas, and
+a suspicion that the current-slide indicator in the filmstrip is only a
+visible stroke difference, not a semantic attribute). So instead of
+guessing selectors and iterating capture rounds, this procedure captures a
+bounded structural skeleton of the whole page for manual (Claude-assisted)
+review:
+
+1. Open a real Google Slides presentation you own in edit view — do **not**
+   click Present. Prefer a throwaway/non-sensitive deck if you have one —
+   the capture includes the document's real URL and any `aria-label`/
+   `data-*` attribute values found in the DOM, which may include real slide
+   title text, and captures get committed to git (see step 3). Redact the
+   `url` field and any suspect attribute values in the saved JSON if you
+   must use a sensitive deck.
+2. Open DevTools console (type `allow pasting` and press Enter first if
+   this is the first paste in this browser profile). Paste the contents of
+   `docs/manual_tests/capture_google_slides_edit_dom.js` and run it.
+3. Run `copy(result)`, then save the clipboard contents as
+   `docs/manual_tests/captures/YYYY-MM-DD-editview.json`.
+4. Click a *different* slide in the filmstrip, then re-run
+   `copy(captureGoogleSlidesEditDom())` and save as
+   `docs/manual_tests/captures/YYYY-MM-DD-editview-2.json`. Having both
+   captures lets Claude diff them directly to pinpoint exactly which
+   node's attributes or computed style change on slide selection, rather
+   than reasoning from a single static tree.
+5. Hand both files to Claude in a normal conversation and ask it to review
+   them against the open selector questions in
+   `docs/specs/2026-08-21-google-slides-edit-view-recon-design.md` (the
+   `div#canvas-container` hunch, and what marks the selected filmstrip
+   thumbnail). This starts a separate follow-up design/implementation
+   cycle for the actual `content.js`/`adapters/google_slides.js` changes —
+   this procedure only produces the raw capture data.
+6. If the capture's top-level `truncated` field is `true`, the walk hit
+   its node budget before finishing — mention this to Claude, since it may
+   mean the walk needs to be re-scoped to a narrower root (e.g. starting
+   from `#canvas-container` instead of `document.body`) rather than
+   trusted as a complete picture.
