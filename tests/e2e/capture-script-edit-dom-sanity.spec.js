@@ -52,6 +52,19 @@ test("edit-dom capture script reports a bounded skeleton against the local edit-
 
   const bodyRoot = before.domRoots[0].root;
 
+  // SVG-depth cap — the inner <g> (svg=depth 0, outer g=depth 1, inner
+  // g=depth 2) hits MAX_SVG_DEPTH, so its two <path> children should be
+  // excluded, but childCount should still report 2 — proving they were
+  // deliberately capped, not just absent.
+  const canvasSvgNode = findNode(bodyRoot, (n) => n.tag === "svg");
+  const innerGNode = findNode(
+    canvasSvgNode,
+    (n) => n.tag === "g" && n.children.length === 0
+  );
+  expect(innerGNode).not.toBeNull();
+  expect(innerGNode.childCount).toBe(2);
+  expect(innerGNode.children.length).toBe(0);
+
   // Selection is only distinguishable by computed stroke, not class name —
   // proves the script's style capture (not just class capture) is what's
   // needed to spot the real filmstrip's current-slide indicator.

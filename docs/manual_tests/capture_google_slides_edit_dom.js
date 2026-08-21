@@ -53,12 +53,30 @@ function captureGoogleSlidesEditDom() {
   function borderStyleOf(el) {
     const cs = getComputedStyle(el);
     const style = {};
-    if (cs.border && cs.border !== "0px none rgb(0, 0, 0)") style.border = cs.border;
+    // Check borderStyle (which correctly serializes per-side, e.g. "none
+    // none none solid"), not the border shorthand — cs.border is only
+    // non-empty when all four sides are identical, so it silently drops
+    // one-sided borders (e.g. a left accent bar, a common "selected"
+    // indicator pattern). It also false-positives whenever border-color
+    // (which defaults to currentColor) isn't black, even with no visible
+    // border at all.
+    if (cs.borderStyle !== "none") {
+      style.borderWidth = cs.borderWidth;
+      style.borderStyle = cs.borderStyle;
+      style.borderColor = cs.borderColor;
+    }
     if (cs.outlineStyle && cs.outlineStyle !== "none") style.outline = cs.outline;
     if (cs.boxShadow && cs.boxShadow !== "none") style.boxShadow = cs.boxShadow;
-    if (el instanceof SVGElement) {
-      if (cs.stroke && cs.stroke !== "none") style.stroke = cs.stroke;
-      if (cs.strokeWidth) style.strokeWidth = cs.strokeWidth;
+    // namespaceURI check, not `instanceof SVGElement` — an SVG element from
+    // a same-origin iframe's document is an instance of that iframe's own
+    // contentWindow.SVGElement, a different realm than the top window's, so
+    // `instanceof` here would be false for every SVG element inside an
+    // iframe.
+    if (el.namespaceURI === "http://www.w3.org/2000/svg") {
+      if (cs.stroke && cs.stroke !== "none") {
+        style.stroke = cs.stroke;
+        if (cs.strokeWidth) style.strokeWidth = cs.strokeWidth;
+      }
     }
     return style;
   }
@@ -66,7 +84,6 @@ function captureGoogleSlidesEditDom() {
   function attrsOf(el) {
     const attrs = {};
     for (const attr of el.attributes) {
-      if (attr.name === "class" || attr.name === "id" || attr.name === "style") continue;
       if (attr.name.startsWith("aria-") || attr.name.startsWith("data-") || attr.name === "role") {
         attrs[attr.name] = attr.value;
       }
@@ -117,8 +134,10 @@ function captureGoogleSlidesEditDom() {
       return node;
     }
 
-    const renderedChildren = Array.from(el.children).filter(isRendered);
+    const allChildren = Array.from(el.children);
+    const renderedChildren = allChildren.filter(isRendered);
     const total = renderedChildren.length;
+    const skippedForSize = allChildren.length - total;
 
     if (total > MAX_CHILDREN_SHOWN * 2) {
       const firstN = renderedChildren.slice(0, MAX_CHILDREN_SHOWN);
@@ -132,16 +151,34 @@ function captureGoogleSlidesEditDom() {
         .map((c) => skeletonize(c, depth + 1, nextSvgDepth))
         .filter(Boolean);
     }
+    // Zero-size children (e.g. a `display: contents` wrapper with no box of
+    // its own but visible children) are filtered out by isRendered before
+    // we even get here, which would otherwise silently drop those
+    // children's entire subtree with no signal in the output — unlike the
+    // fan-out cap above, which records childrenOmitted.
+    if (skippedForSize > 0) node.childrenSkipped = skippedForSize;
 
     return node;
   }
 
-  const domRoots = [{ hostIframeClassName: null, root: skeletonize(document.body, 0, 0) }];
+  // Every rect inside a domRoots entry's `root` (including nested
+  // descendants) is relative to that root's own document/iframe viewport,
+  // not the top document — add hostIframeRect's left/top to a rect to
+  // recover top-document coordinates when hostIframeRect is non-null (it's
+  // always null for the top-document entry, which needs no such
+  // adjustment).
+  const domRoots = [
+    { hostIframeClassName: null, hostIframeRect: null, root: skeletonize(document.body, 0, 0) },
+  ];
   for (const iframe of document.querySelectorAll("iframe")) {
     try {
       if (iframe.contentDocument && iframe.contentDocument.body) {
         domRoots.push({
           hostIframeClassName: iframe.getAttribute("class") || null,
+          hostIframeRect: (() => {
+            const r = iframe.getBoundingClientRect();
+            return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+          })(),
           root: skeletonize(iframe.contentDocument.body, 0, 0),
         });
       }

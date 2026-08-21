@@ -61,6 +61,15 @@ This automatically, for the duration of the run only:
   `requestFullscreen()`. This checks the capture script's own correctness
   against a controlled fixture — it says nothing about real Google Slides;
   that's what the manual procedure below verifies.
+- **`capture-script-edit-dom-sanity.spec.js`** — injects
+  `docs/manual_tests/capture_google_slides_edit_dom.js` into a synthetic
+  edit-view fixture and asserts the bounded skeleton walk's mechanics: the
+  `div#canvas-container` fast-check, computed-stroke capture distinguishing
+  otherwise-identical filmstrip thumbnails, the wide-fan-out cap, and the
+  global depth cap. Like `capture-script-sanity.spec.js`, this validates the
+  recon script's own correctness against a controlled fixture — it says
+  nothing about real Google Slides edit-view DOM structure; that's what the
+  manual procedure below is for.
 
 ## Deliberately out of scope
 
