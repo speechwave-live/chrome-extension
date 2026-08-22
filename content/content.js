@@ -3,6 +3,13 @@ const FIREWORKS_MIN_PERCENT = 0.4;
 const FIREWORKS_COOLDOWN_MS = 8000;
 const FIREWORKS_BURST_COUNT = 16;
 
+const EMOJI_FLOAT_DURATION_MS = 2500;
+// animationend can fail to fire, e.g. when the overlay is re-parented into
+// document.fullscreenElement mid-animation (same risk spawnFireworks's own
+// safety timeout guards against). This bounds how long a stray span can
+// linger before its fallback cleanup forces it out.
+const EMOJI_CLEANUP_SAFETY_BUFFER_MS = 500;
+
 // Google renders slide content in an iframe it stacks above regular page
 // content. Regardless of that iframe's own z-index, the maximum value beats
 // it under normal stacking rules (see docs/decisions.md for why fullscreen
@@ -203,16 +210,22 @@ function spawnEmoji(emoji) {
     "bottom: 0",
     `left: ${Math.floor(Math.random() * 70)}%`,
     `font-size: ${round2(boxHeight * tuning.emoji_font_size_ratio)}px`,
-    "animation: speechwaveFloat 2.5s ease-out forwards",
+    `animation: speechwaveFloat ${EMOJI_FLOAT_DURATION_MS}ms ease-out forwards`,
     "pointer-events: none",
   ].join(";");
   el.style.setProperty("--rise", `${round2(boxHeight * tuning.emoji_rise_ratio)}px`);
   overlay.appendChild(el);
-  el.addEventListener("animationend", () => {
+
+  let cleaned = false;
+  const cleanupSpan = () => {
+    if (cleaned) return;
+    cleaned = true;
     el.remove();
     inFlight[emoji] = Math.max(0, (inFlight[emoji] || 0) - 1);
     if (inFlight[emoji] === 0) delete inFlight[emoji];
-  });
+  };
+  el.addEventListener("animationend", cleanupSpan);
+  setTimeout(cleanupSpan, EMOJI_FLOAT_DURATION_MS + EMOJI_CLEANUP_SAFETY_BUFFER_MS);
 
   maybeSpawnFireworks(emoji);
 }

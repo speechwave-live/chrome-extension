@@ -391,6 +391,27 @@ describe("RENDER_EMOJI message", () => {
       .querySelectorAll("span");
     expect(spans.length).toBe(3);
   });
+
+  test("removes the span on a safety timer even if animationend never fires", () => {
+    jest.useFakeTimers();
+    const { messageHandler } = loadContent();
+
+    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+
+    const overlay = document.getElementById("speechwave-overlay");
+    expect(overlay.querySelectorAll("span").length).toBe(1);
+
+    // animationend is never dispatched here, simulating it failing to fire
+    // (e.g. the overlay getting reparented into document.fullscreenElement
+    // mid-animation, which is a known risk called out in spawnFireworks's
+    // own safety-timeout comment). Without a fallback, the span leaks
+    // forever.
+    jest.advanceTimersByTime(5000);
+
+    expect(overlay.querySelectorAll("span").length).toBe(0);
+
+    jest.useRealTimers();
+  });
 });
 
 describe("slide observer", () => {
