@@ -55,7 +55,8 @@ in the reaction-cleanup path was hardened. See
       dashboard pre-fills forms from the prior submission. Also carried
       forward the real "Data usage" checkboxes and privacy policy URL,
       which the earlier draft had only paraphrased, not reproduced.
-- [ ] Submitted via Chrome Web Store Developer Dashboard
+- [x] Submitted via Chrome Web Store Developer Dashboard, 2026-08-22
+      (pending review)
 
 ## Known gaps in the v1.0.0 record
 
