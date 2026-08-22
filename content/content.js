@@ -90,9 +90,21 @@ function getSlideRect(iframe) {
   };
 }
 
+// Google Slides' edit view (presenting directly from the editor, no
+// Present click) renders the live slide inside this container. Unlike
+// present mode's iframe, it needs no separate letterbox sub-rect
+// computation — confirmed via real capture that its own bounding rect
+// already matches the rendered slide's true bounds to within a 1px
+// border inset. See docs/google_slides_dom_assumptions.md's
+// "Edit-view investigation" section.
+function getEditCanvasRect() {
+  const el = document.getElementById("canvas-container");
+  return el ? el.getBoundingClientRect() : null;
+}
+
 function syncOverlayPosition(overlay) {
   const iframe = getPresentIframe();
-  const rect = iframe && (getSlideRect(iframe) || iframe.getBoundingClientRect());
+  const rect = (iframe && (getSlideRect(iframe) || iframe.getBoundingClientRect())) || getEditCanvasRect();
   const tuning = remoteConfig.tuning;
 
   if (rect) {

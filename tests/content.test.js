@@ -71,14 +71,15 @@ const FULL_TUNING = {
   emoji_rise_ratio: 0.3,
 };
 
+function addPresentIframe(rect) {
+  const iframe = document.createElement("iframe");
+  iframe.className = "punch-present-iframe";
+  iframe.getBoundingClientRect = jest.fn().mockReturnValue(rect);
+  document.body.appendChild(iframe);
+  return iframe;
+}
+
 describe("overlay sizing: percent of the slide's actual dimensions", () => {
-  function addPresentIframe(rect) {
-    const iframe = document.createElement("iframe");
-    iframe.className = "punch-present-iframe";
-    iframe.getBoundingClientRect = jest.fn().mockReturnValue(rect);
-    document.body.appendChild(iframe);
-    return iframe;
-  }
 
   function setRemoteConfig(messageHandler, { percent, fireworksEnabled = true, tuning = FULL_TUNING }) {
     messageHandler(
@@ -190,6 +191,41 @@ describe("overlay sizing: percent of the slide's actual dimensions", () => {
     expect(span.style.top).toBe("50px");
     // font-size: 100 (height) * 0.12 = 12
     expect(span.style.fontSize).toBe("12px");
+  });
+});
+
+describe("overlay sizing: edit-view canvas anchoring", () => {
+  function addCanvasContainer(rect) {
+    const el = document.createElement("div");
+    el.id = "canvas-container";
+    el.getBoundingClientRect = jest.fn().mockReturnValue(rect);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  test("anchors to canvas-container's rect when no present iframe is found", () => {
+    addCanvasContainer({ left: 0, top: 0, right: 800, bottom: 450, width: 800, height: 450 });
+    loadContent();
+
+    const overlay = document.getElementById("speechwave-overlay");
+    // DEFAULT_CONFIG.settings.overlay_size_percent = 20
+    expect(overlay.style.width).toBe("160px"); // 800 * 0.2
+    expect(overlay.style.height).toBe("90px"); // 450 * 0.2
+    // left: 800 - 160 - 8 (margin) = 632; top: 450 - 90 - 8 = 352
+    expect(overlay.style.left).toBe("632px");
+    expect(overlay.style.top).toBe("352px");
+    expect(overlay.style.right).toBe("");
+    expect(overlay.style.bottom).toBe("");
+  });
+
+  test("present iframe takes priority over canvas-container when both exist", () => {
+    addPresentIframe({ left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500 });
+    addCanvasContainer({ left: 0, top: 0, right: 800, bottom: 450, width: 800, height: 450 });
+    loadContent();
+
+    const overlay = document.getElementById("speechwave-overlay");
+    // 1000 * 0.2 = 200, from the iframe's rect — not canvas-container's 800 * 0.2 = 160
+    expect(overlay.style.width).toBe("200px");
   });
 });
 
