@@ -44,7 +44,22 @@ in the reaction-cleanup path was hardened. See
 - [x] Submission zip built via `bin/create_submission_zip.sh` (new: a
       repeatable, drift-checked replacement for the ad hoc zip used for
       1.0.0). Output lives alongside this file as `speechwave-v1.0.1.zip`.
+- [x] `submission-fields.md` diffed against `../v1.0.0/submission-fields.md`
+      (real dashboard answers). Kept identical except two material updates
+      (storage and tabs justifications, both explained inline) since the
+      dashboard pre-fills forms from the prior submission. Also carried
+      forward the real "Data usage" checkboxes and privacy policy URL,
+      which the earlier draft had only paraphrased, not reproduced.
 - [ ] Submitted via Chrome Web Store Developer Dashboard
+
+## Known gaps in the v1.0.0 record
+
+`v1.0.0/web-store-listing.md` doesn't include the short description (132
+char) field, so there's no baseline to diff `web-store-listing.md`'s short
+description against. Other Dashboard fields (category, language,
+screenshots/promo tile as actually uploaded, demo video URL) also weren't
+captured. Worth grabbing if exact parity tracking matters, though these are
+likely unchanged static assets.
 
 ## Files in this folder
 
