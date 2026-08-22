@@ -12,31 +12,37 @@ live Google Slides deck — recorded in
 - `div#canvas-container`'s own bounding rect is already the true
   visible-slide rect, with no separate letterboxing/scaling math needed
   (unlike present mode's iframe).
-- The current slide's opaque page id is available from
-  `window.location.hash` (`#slide=id.<pageId>`), updated live as the
-  filmstrip selection changes, with no page reload.
-- Each filmstrip thumbnail is a `.punch-filmstrip-thumbnail[data-slide-page-id="<pageId>"]`
-  element, in DOM order matching slide order.
-- A slide marked "Skip slide" gains a `<title>Skipped in slideshow
-  mode</title>` element nested in its thumbnail's rendered content —
-  absent entirely otherwise. This is the only reliable, semantic marker;
-  the visible dimming/icon treatment is cosmetic (a separate overlay
-  shape + a clipped `<image>`, not an `opacity` property), and not itself
-  a good detection signal.
+
+A second round of captures against an expanded, 30-slide test deck then
+found that Google **virtualizes the edit-view filmstrip** — only a window
+of thumbnails near the current scroll position ever exists in the DOM at
+once (14 of 30 in that capture). This breaks the ordinal slide-number
+approach the recon design had otherwise fully worked out (URL hash for the
+current opaque page id, `.punch-filmstrip-thumbnail[data-slide-page-id]`
+DOM order for position, a `<title>` marker to exclude "Skip slide"
+entries) — a slide's position among only the currently-rendered
+thumbnails isn't its true position in the deck. No absolute-position
+signal was found to substitute. Full writeup:
+`docs/google_slides_dom_assumptions.md`'s "filmstrip virtualization breaks
+DOM-order counting" section.
 
 This design covers the actual `content.js`/`adapters/google_slides.js`
 changes deferred by the recon design — the second, implementation half of
-the two-phase plan set up there.
+the two-phase plan set up there — scoped down to what the virtualization
+finding leaves viable.
 
 ## Scope
 
-1. **Overlay anchoring** — extend `content.js`'s existing present-mode
-   fallback chain with an edit-view layer, so the overlay anchors to the
-   real editing canvas instead of the full browser viewport.
-2. **Slide-number detection** — extend `adapters/google_slides.js`'s
-   `getSlide()` with an edit-view fallback that computes an ordinal slide
-   number from the URL hash and the filmstrip's DOM order, correctly
-   excluding "Skip slide"-marked thumbnails from that count.
+**Overlay anchoring only.** Extend `content.js`'s existing present-mode
+fallback chain with an edit-view layer, so the overlay anchors to the real
+editing canvas instead of the full browser viewport. Unaffected by the
+virtualization finding — `canvas-container` isn't part of the filmstrip.
+
+**Slide-number detection for edit view is explicitly dropped**, not
+deferred pending more investigation. `adapters/google_slides.js`'s
+`getSlide()` keeps returning the `0` ("unknown slide") sentinel for edit
+view, exactly as it does today. See "Known limitations / non-goals" below
+for why this was decided rather than left open.
 
 ## Non-goal
 
@@ -85,90 +91,12 @@ The `fullscreenchange` listener and all downstream percent/margin math in
 `syncOverlayPosition` are untouched — they're already generic over "the
 current rect," regardless of which detection layer produced it.
 
-## Slide-number detection (`adapters/google_slides.js`)
-
-Add:
-
-```js
-// Edit view (presenting directly from the editor, no Present click) has
-// no a11y element at all — the current slide's id lives in the URL hash
-// instead (Google updates it via history state as the filmstrip
-// selection changes, no page reload). The id is opaque (not numeric), so
-// getting an ordinal slide number means finding its 1-based position
-// among the filmstrip's thumbnails in DOM order — skipping any marked
-// "Skip slide" via a nested <title> element, confirmed to be their only
-// marker (absent entirely on non-skipped thumbnails). Returns the
-// "unknown slide" sentinel (0) if the hash doesn't match, the filmstrip
-// isn't present, or the current slide's id is itself skip-marked.
-//
-// Assumes every slide's thumbnail exists in the filmstrip DOM at once —
-// untested against very large decks, where Google may virtualize
-// off-screen thumbnails. See docs/google_slides_dom_assumptions.md.
-function getEditViewSlide() {
-  const match = window.location.hash.match(/^#slide=id\.(.+)$/);
-  if (!match) return 0;
-  const currentPageId = match[1];
-
-  const thumbnails = document.querySelectorAll(".punch-filmstrip-thumbnail[data-slide-page-id]");
-  let ordinal = 0;
-  for (const thumbnail of thumbnails) {
-    const isSkipped = !!thumbnail.querySelector("svg > title");
-    if (isSkipped) continue;
-    ordinal++;
-    if (thumbnail.getAttribute("data-slide-page-id") === currentPageId) {
-      return ordinal;
-    }
-  }
-  return 0; // current slide not found among non-skipped thumbnails (itself skipped, or filmstrip absent/hidden)
-}
-```
-
-`getSlide()`'s existing present-mode search is unchanged; its final
-`return 0;` becomes `return getEditViewSlide();` — present-mode detection
-is tried first, falling through to edit-view detection instead of
-unconditionally giving up.
-
-The file's top docstring currently states flatly that the a11y element
-"is NOT present in the editor view. Slide tracking therefore only works
-once the slideshow has started." This needs correcting to describe the
-new fallback path, and its "re-run the capture-and-compare procedure"
-note should mention the edit-view procedure/script
-(`docs/manual_tests/capture_google_slides_edit_dom.js`) alongside the
-existing present-mode one (`capture_real_google_slides_dom.js`).
+`adapters/google_slides.js` is **not modified** by this design. Its file
+docstring's existing statement that the a11y element "is NOT present in
+the editor view. Slide tracking therefore only works once the slideshow
+has started" remains accurate as-is — no change needed.
 
 ## Testing
-
-### Jest — `adapters/google_slides.js` (`tests/google_slides_adapter.test.js`)
-
-New fixture `tests/fixtures/google_slides_edit_view_dom.html`, using the
-real page ids from the capture for authenticity:
-
-```html
-<div class="punch-filmstrip-thumbnail" data-slide-page-id="p"></div>
-<div class="punch-filmstrip-thumbnail" data-slide-page-id="g3f075e61544_1_0"></div>
-<div class="punch-filmstrip-thumbnail" data-slide-page-id="g3f71a2fba3d_0_5">
-  <svg><title>Skipped in slideshow mode</title></svg>
-</div>
-<div class="punch-filmstrip-thumbnail" data-slide-page-id="g3f71a2fba3d_0_22"></div>
-```
-
-New test cases (setting `window.location.hash` directly — supported by
-jsdom without a real navigation):
-
-- Hash matches the 2nd thumbnail (`g3f075e61544_1_0`) → `getSlide()`
-  returns `2`.
-- Hash matches the skip-marked 3rd thumbnail (`g3f71a2fba3d_0_5`) →
-  returns `0`.
-- Hash matches the 4th thumbnail (`g3f71a2fba3d_0_22`) → returns `3`,
-  proving the skipped 3rd thumbnail is excluded from the ordinal count,
-  not just from being selectable.
-- Hash doesn't match `/^#slide=id\.(.+)$/` → returns `0`.
-- Filmstrip absent entirely (empty body) even with a valid matching hash
-  → returns `0`.
-
-Each test must reset `window.location.hash` in `afterEach` alongside the
-existing `document.body.innerHTML = ""` reset, so hash state doesn't leak
-between tests.
 
 ### Jest — `content.js` (`tests/content.test.js`)
 
@@ -206,24 +134,22 @@ backend/seeding needed, just a static fixture + bounding-box assertion.
 New fixture with `#canvas-container` at a known rect; test asserts
 `#speechwave-overlay`'s box matches `overlay_size_percent` of it.
 
-**Deliberately not added:** a backend-seeded e2e test for slide-number
-detection specifically. The existing `slide-detection.spec.js` already
-proves the `SLIDE_CHANGED` → popup pipeline works, independent of which
-adapter logic computed the number, and the Jest suite above already
-thoroughly covers `getEditViewSlide()`'s actual logic in isolation. A new
-edit-view variant would mostly re-prove already-tested plumbing at real
-backend-seeding cost, for little additional coverage.
-
 ## Known limitations / non-goals
 
-- **Filmstrip virtualization for large decks is untested.** The only real
-  capture was a 4-slide deck with every thumbnail rendered in the DOM at
-  once. If Google virtualizes off-screen thumbnails for large decks,
-  `getEditViewSlide()`'s DOM-order count would undercount for slides
-  scrolled out of view. Not blocking this implementation — documented as
-  a known risk, same treatment as the existing "not yet tested against a
-  non-16:9 deck" caveat in `docs/google_slides_dom_assumptions.md`. Worth
-  a follow-up capture against a larger test deck if one becomes available.
+- **Slide-number detection for edit view is dropped, not deferred.**
+  Filmstrip virtualization (confirmed via a 30-slide capture — only 14 of
+  30 thumbnails render in the DOM at once) breaks DOM-order ordinal
+  counting regardless of skip-filtering, and no absolute-position
+  alternative was found. A programmatic scroll-and-enumerate approach to
+  defeat virtualization was considered and rejected as disproportionately
+  complex and intrusive (would visibly hijack the presenter's own
+  filmstrip scroll position) for what it would buy. Reactions received
+  while presenting from edit view will attribute to slide `0`
+  (unattributed) — still shown live in the overlay, just not routed to a
+  specific slide. Arguably not just an accepted limitation: a presenter
+  who drops into edit view mid-Q&A to jump between slides wouldn't want
+  those reactions attributed to whichever slide they land on anyway, since
+  that reflects the Q&A tail, not how the presentation proper landed.
 - **Non-16:9 decks are untested** for the canvas-anchoring assumption
   (carried over unresolved from the recon findings).
 - **No new "is this edit view" detection gate.** As established during
