@@ -21,7 +21,8 @@ capture file.**
 | 1 | The slide-number element is `.punch-viewer-svgpage-a11yelement[aria-label*="Slide"]`, with an `aria-label` matching `/^Slide (\d+)/`, present in the top document or a same-origin iframe. | `adapters/google_slides.js:23-42` (`getSlide`) | Slide tracking silently returns `0` (the "unknown slide" sentinel) — reactions route to slide 0 server-side instead of the real current slide. | 2026-08-14 |
 | 2 | The live slideshow renders inside `iframe.punch-present-iframe`. | `content/content.js:59-61` (`getPresentIframe`) | The overlay falls back to viewport-relative sizing instead of anchoring to the slide. | 2026-08-14 — confirmed true for both reliably-reproducible present modes (fullscreen, windowed); one anomalous capture with no iframe was observed once and is not currently reproducible — see "2026-08-14 findings" |
 | 3 | The a11y element's `getBoundingClientRect()` within the iframe's own document represents the visible slide's bounds; offsetting by the iframe's own top-document rect gives correct top-document coordinates. | `content/content.js:71-91` (`getSlideRect`) | Overlay/emoji render off-slide in windowed present mode — the exact bug `tests/e2e/overlay-windowed-position.spec.js` exists to catch. | 2026-08-14 — sub-rect math confirmed on both axes (see findings); offset-addition step (non-zero iframe origin) still untested by any capture |
-| 4 | Whether real Google Slides fullscreens the bare `iframe.punch-present-iframe`, or a wrapping element. Confirmed: a wrapping element (`div.punch-full-screen-element.punch-full-window-overlay`), at least for the in-editor overlay present flow — see findings. | `content/content.js:166-174` (`fullscreenchange` listener) | If the bare iframe: the overlay is appended into a node that never renders light-DOM children, and silently fails to render in fullscreen present mode. | 2026-08-14 |
+| 4 | Whether real Google Slides fullscreens the bare `iframe.punch-present-iframe`, or a wrapping element. Confirmed: a wrapping element (`div.punch-full-screen-element.punch-full-window-overlay`), at least for the in-editor overlay present flow — see findings. | `content/content.js:181-189` (`fullscreenchange` listener) | If the bare iframe: the overlay is appended into a node that never renders light-DOM children, and silently fails to render in fullscreen present mode. | 2026-08-14 |
+| 5 | `div#canvas-container` exists in the top document during Google Slides edit view (presenting directly from `/edit`, no present iframe), and its own `getBoundingClientRect()` is the true visible-slide rect (no separate letterbox/scaling math needed, confirmed to within a 1px border inset). | `content/content.js:100-105` (`getEditCanvasRect`) | The overlay falls back to sizing off the full browser viewport in edit view instead of anchoring to the actual slide — the same degrade-gracefully behavior as before this feature existed, not a crash. | 2026-08-21 — capture `2026-08-21-editview.json` (and confirmed identical across the other 2026-08-21 edit-view captures in the same directory) |
 
 ## Capture history
 
@@ -132,14 +133,24 @@ resurfaces (e.g. a user reports the overlay rendering off-slide in a
 windowed present mode), this capture and screenshot are the starting
 evidence to compare against.
 
+This flow's fallback path changed as of this branch: `syncOverlayPosition`
+now falls through to `getEditCanvasRect()` before the viewport fallback,
+instead of going straight to the viewport fallback. Whether that page
+happens to contain a `#canvas-container` is unconfirmed — the present-mode
+capture script records targeted fields, not a full DOM dump, so this can't
+be checked from existing captures.
+
 ## Edit-view investigation
 
 A third real-world presentation pattern — presenting directly from the
 editor (`/edit` URL, no `punch-present-iframe` at all) — is tracked
-separately from the present-mode assumptions above, since (as of this
-section) no `content.js`/`adapters/google_slides.js` code encodes any of
-it yet; see `docs/specs/2026-08-21-google-slides-edit-view-recon-design.md`
-for the full design and `docs/manual_tests.md`'s "Verifying Google Slides
+separately from the present-mode assumptions above. `content.js`'s
+`getEditCanvasRect()` now encodes assumption #5 above, added to the main
+table once overlay anchoring shipped; `adapters/google_slides.js` remains
+untouched, since slide-number detection for edit view was investigated and
+dropped (see "filmstrip virtualization breaks DOM-order counting" below).
+See `docs/specs/2026-08-21-google-slides-edit-view-recon-design.md` for the
+recon design and `docs/manual_tests.md`'s "Verifying Google Slides
 edit-view DOM structure" section for the capture procedure using
 `docs/manual_tests/capture_google_slides_edit_dom.js`.
 

@@ -99,7 +99,9 @@ function getSlideRect(iframe) {
 // "Edit-view investigation" section.
 function getEditCanvasRect() {
   const el = document.getElementById("canvas-container");
-  return el ? el.getBoundingClientRect() : null;
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 ? rect : null;
 }
 
 function syncOverlayPosition(overlay) {
@@ -129,11 +131,12 @@ function syncOverlayPosition(overlay) {
     overlay.style.bottom = "";
     overlay.style.zIndex = OVERLAY_MAX_Z_INDEX;
   } else {
-    // No presentation iframe detected (extension active before "Present" is
-    // clicked, or Google Slides' DOM changed and our selector stopped
-    // matching). Fall back to sizing off the browser viewport instead of the
-    // slide, so the overlay still scales with the user's chosen size and
-    // never collapses to 0x0 — degrade gracefully rather than going invisible.
+    // Neither a present iframe nor an edit-view canvas detected (Google
+    // Slides' DOM changed and our selectors stopped matching, or some other
+    // unrecognized state). Fall back to sizing off the browser viewport
+    // instead of the slide, so the overlay still scales with the user's
+    // chosen size and never collapses to 0x0 — degrade gracefully rather
+    // than going invisible.
     const percent = Math.max(
       remoteConfig.settings.overlay_size_percent,
       tuning.min_overlay_size_percent

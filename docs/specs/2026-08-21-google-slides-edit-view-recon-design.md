@@ -1,5 +1,11 @@
 # Google Slides edit-view support: recon tooling design
 
+> **Outcome:** see
+> `docs/specs/2026-08-21-google-slides-edit-view-support-design.md` for what
+> this recon led to — overlay anchoring shipped; slide-number detection
+> (listed as still-open in "Scope" below) was investigated and dropped due
+> to filmstrip virtualization, see `docs/google_slides_dom_assumptions.md`.
+
 ## Context
 
 The extension currently recognizes two Google Slides presentation states,

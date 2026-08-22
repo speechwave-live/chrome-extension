@@ -144,17 +144,21 @@ real, timestamped, diffable evidence behind them over time.
 
 ## Verifying Google Slides edit-view DOM structure
 
-Investigating support for edit-view presenting (no Present click — the
-talk happens directly on the `/edit` URL) — see
-`docs/specs/2026-08-21-google-slides-edit-view-recon-design.md`. Nobody
-has captured real edit-view DOM yet, and unlike the present-mode
-investigation, we don't have confirmed selector names to check — only
-informal leads (a `div#canvas-container` hunch for the editing canvas, and
-a suspicion that the current-slide indicator in the filmstrip is only a
-visible stroke difference, not a semantic attribute). So instead of
-guessing selectors and iterating capture rounds, this procedure captures a
-bounded structural skeleton of the whole page for manual (Claude-assisted)
-review:
+Edit-view presenting (no Present click — the talk happens directly on the
+`/edit` URL) was investigated using the recon tooling from
+`docs/specs/2026-08-21-google-slides-edit-view-recon-design.md`. Unlike the
+present-mode investigation, which started from confirmed selector names,
+this one started from only informal leads — a `div#canvas-container` hunch
+for the editing canvas, and a suspicion that the current-slide indicator in
+the filmstrip is only a visible stroke difference, not a semantic
+attribute — so rather than guessing selectors and iterating capture
+rounds, this procedure captures a bounded structural skeleton of the whole
+page for manual (Claude-assisted) review. Both leads have since been
+confirmed against real captures, and the canvas-anchoring lead has shipped
+in `content.js`'s `getEditCanvasRect()` — see
+`docs/google_slides_dom_assumptions.md`'s "Edit-view investigation" section
+for the full findings, including why filmstrip-based slide-number detection
+was ultimately dropped.
 
 1. Open a real Google Slides presentation you own in edit view — do **not**
    click Present. Prefer a throwaway/non-sensitive deck if you have one —
@@ -175,14 +179,19 @@ review:
    node's attributes or computed style change on slide selection, rather
    than reasoning from a single static tree.
 5. Hand both files to Claude in a normal conversation and ask it to review
-   them against the open selector questions in
-   `docs/specs/2026-08-21-google-slides-edit-view-recon-design.md` (the
-   `div#canvas-container` hunch, and what marks the selected filmstrip
-   thumbnail). This starts a separate follow-up design/implementation
-   cycle for the actual `content.js`/`adapters/google_slides.js` changes —
-   this procedure only produces the raw capture data.
+   them against `docs/google_slides_dom_assumptions.md`'s "Edit-view
+   investigation" section (the `div#canvas-container` assumption, and what
+   marks the selected filmstrip thumbnail).
 6. If the capture's top-level `truncated` field is `true`, the walk hit
    its node budget before finishing — mention this to Claude, since it may
    mean the walk needs to be re-scoped to a narrower root (e.g. starting
    from `#canvas-container` instead of `document.body`) rather than
    trusted as a complete picture.
+7. If everything's confirmed: update `docs/google_slides_dom_assumptions.md`'s
+   ledger "Last verified" column and add a row to its "Edit-view
+   investigation" capture-history table. If something's contradicted:
+   that's a normal bug — fix the code, then update the ledger.
+
+**If you touch `content/content.js`'s `getEditCanvasRect()` again, re-run
+this procedure before merging, and update the ledger accordingly** — same
+spirit as the present-mode procedure above.

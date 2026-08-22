@@ -227,6 +227,19 @@ describe("overlay sizing: edit-view canvas anchoring", () => {
     // 1000 * 0.2 = 200, from the iframe's rect — not canvas-container's 800 * 0.2 = 160
     expect(overlay.style.width).toBe("200px");
   });
+
+  test("falls back to viewport fallback when canvas-container has a zero-size rect", () => {
+    addCanvasContainer({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 });
+    loadContent();
+
+    const overlay = document.getElementById("speechwave-overlay");
+    // A present-but-hidden/not-yet-laid-out canvas-container is still truthy,
+    // so without a width/height guard syncOverlayPosition would take the
+    // rect branch and produce a 0px-sized overlay (invisible reactions)
+    // instead of degrading gracefully to the viewport fallback.
+    expect(overlay.style.right).toBe("8px");
+    expect(overlay.style.bottom).toBe("8px");
+  });
 });
 
 describe("remote config", () => {
