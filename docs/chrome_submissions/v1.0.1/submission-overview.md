@@ -41,6 +41,9 @@ in the reaction-cleanup path was hardened. See
       and has been replaced. Committed on
       `docs/extension-md-store-resubmission-prep` in the `docs` repo, not
       yet merged.
+- [x] Submission zip built via `bin/create_submission_zip.sh` (new: a
+      repeatable, drift-checked replacement for the ad hoc zip used for
+      1.0.0). Produces `speechwave-v1.0.1.zip` in the repo root.
 - [ ] Submitted via Chrome Web Store Developer Dashboard
 
 ## Files in this folder
