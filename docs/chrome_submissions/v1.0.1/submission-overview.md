@@ -15,6 +15,11 @@ in the reaction-cleanup path was hardened. See
 - [x] `docs/web-store-listing.md` reviewed, a stale typo and several
       writing-style violations fixed, confirmed accurate for this version
       (snapshotted in `web-store-listing.md` in this folder)
+- [x] `manifest.json`'s `description` updated to the polished 128-char
+      copy. Discovered the Dashboard's "Summary" field isn't independently
+      editable, it's pulled straight from this field, so the better copy
+      previously sitting only in `docs/web-store-listing.md` had never
+      actually been live. See `web-store-listing.md`'s note in this folder.
 - [x] `docs/extension.md` (external docs repo) updated to cover windowed
       present mode and the slide-tracking/editor-view caveat
 - [x] `manifest.json` version bumped to 1.0.1
@@ -54,12 +59,13 @@ in the reaction-cleanup path was hardened. See
 
 ## Known gaps in the v1.0.0 record
 
-`v1.0.0/web-store-listing.md` doesn't include the short description (132
-char) field, so there's no baseline to diff `web-store-listing.md`'s short
-description against. Other Dashboard fields (category, language,
-screenshots/promo tile as actually uploaded, demo video URL) also weren't
-captured. Worth grabbing if exact parity tracking matters, though these are
-likely unchanged static assets.
+`v1.0.0/web-store-listing.md` now covers the full Dashboard capture
+(Title/Summary from package, Description, Category, Language, Graphic
+assets, Official/Homepage/Support URLs, Mature content), so the gap noted
+here earlier is closed. One thing still not independently verified: whether
+the four screenshots referenced elsewhere in this repo's docs are the exact
+four files uploaded to the Dashboard's Graphic assets section. Worth
+checking directly in the Dashboard before submitting.
 
 ## Files in this folder
 

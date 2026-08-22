@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Speechwave",
   "version": "1.0.1",
-  "description": "Live emoji reactions overlay for conference talks",
+  "description": "Live emoji reactions on your Google Slides. Your audience reacts in real time while you present, with per-slide analytics after.",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
     "https://speechwave.live/*"

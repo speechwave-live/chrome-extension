@@ -1,4 +1,17 @@
-**Live audience reactions, right on your slides.**
+# Store listing page
+
+## Product details
+
+### Title from package
+Speechwave
+
+### Summary from package
+Live emoji reactions overlay for conference talks
+
+### Description
+
+```markdown
+**Live emoji reactions overlay for conference talks**Live audience reactions, right on your slides.**
 
 Speechwave lets your audience send emoji reactions while you present. Reactions float up on your Google Slides in real time, so you get continuous engagement in the room and per-slide analytics afterward to see what landed.
 
@@ -39,4 +52,41 @@ After connecting, start a new session and open your Google Slides presentation a
 **Support**
 
 Questions or feedback? Reach us at speechwave.live.
+
+```
+
+### Category
+Communication
+
+### Language
+English (US)
+
+## Grpahic assets
+
+- store icon: 128x128 provided
+- global promo video: none
+- screenshots: 4 provided
+- small promo tile: provided
+- marquee promo tile: none
+
+## Additional fields
+
+### Official URL
+speechwave.live
+
+### Homepage URL
+speechwave.live
+
+### Support URL
+none
+
+### Mature content
+off
+
+## Additional metrics
+(an opt in link for Google Analytics)
+
+## Item support
+Visibility
+
 

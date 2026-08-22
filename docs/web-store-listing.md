@@ -1,8 +1,13 @@
 # Chrome Web Store Listing
 
-## Short description (132 char max)
+## Title and summary
 
-Live emoji reactions on your Google Slides. Your audience reacts in real time while you present, with per-slide analytics after.
+The Dashboard's "Title" and "Summary" fields aren't independently editable:
+Chrome pulls them straight from `manifest.json`'s `name` and `description`
+fields. Edit those, not this doc, to change what shows up there.
+
+- Title: Speechwave
+- Summary (132 char max): Live emoji reactions on your Google Slides. Your audience reacts in real time while you present, with per-slide analytics after.
 
 ## Detailed description
 
@@ -53,3 +58,23 @@ speechwave.live/t/your-talk-slug.
 **Support**
 
 Questions or feedback? Reach us at speechwave.live.
+
+## Category and language
+
+- Category: Communication
+- Language: English (US)
+
+## Graphic assets
+
+- Store icon: 128x128 (provided)
+- Screenshots: 4 (provided)
+- Small promo tile: provided
+- Marquee promo tile: none
+- Global promo video: none
+
+## Additional fields
+
+- Official URL: speechwave.live
+- Homepage URL: speechwave.live
+- Support URL: none
+- Mature content: off
