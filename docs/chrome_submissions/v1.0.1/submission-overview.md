@@ -32,7 +32,15 @@ in the reaction-cleanup path was hardened. See
       to disclose extension data handling (API key storage, slide-number
       transmission). Committed on `docs/privacy-policy-chrome-extension-disclosure`
       in the `speechwave` repo, not yet merged.
-- [ ] Screenshots reviewed against current UI
+- [x] Screenshots (external docs repo, `assets/images/`) reviewed against
+      current UI. `screenshot-extension-popup-setup.png`,
+      `screenshot-slides-overlay.png`, and
+      `screenshot-account-settings-presentation-overlay.png` still accurate.
+      `screenshot-extension-popup-connected.png` was stale (showed a
+      "Fireworks animations" checkbox removed from the popup on 2026-07-28)
+      and has been replaced. Committed on
+      `docs/extension-md-store-resubmission-prep` in the `docs` repo, not
+      yet merged.
 - [ ] Submitted via Chrome Web Store Developer Dashboard
 
 ## Files in this folder
