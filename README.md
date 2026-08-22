@@ -204,13 +204,13 @@ against a live local speechwave dev server. See `docs/manual_tests.md`.
 bin/create_submission_zip.sh
 ```
 
-Produces `speechwave-v<version>.zip` (version read from `manifest.json`) in
-the repo root, containing only the files Chrome actually loads at runtime:
-no tests, docs, or dev tooling. It fails loudly if `manifest.json`
-references a file the script doesn't know to include, so a new content
-script or icon added to the manifest can't silently ship broken. The output
-zip is gitignored; upload it directly to the Chrome Web Store Developer
-Dashboard.
+Produces `docs/chrome_submissions/v<version>/speechwave-v<version>.zip`
+(version read from `manifest.json`), containing only the files Chrome
+actually loads at runtime: no tests, docs, or dev tooling. It fails loudly
+if `manifest.json` references a file the script doesn't know to include, so
+a new content script or icon added to the manifest can't silently ship
+broken. The output zip is gitignored; upload it directly to the Chrome Web
+Store Developer Dashboard.
 
 ## License
 

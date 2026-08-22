@@ -6,7 +6,10 @@ ROOT="$SCRIPT_DIR/.."
 cd "$ROOT"
 
 VERSION="$(jq -r '.version' manifest.json)"
-OUTPUT="speechwave-v${VERSION}.zip"
+OUTPUT_DIR="docs/chrome_submissions/v${VERSION}"
+OUTPUT="$OUTPUT_DIR/speechwave-v${VERSION}.zip"
+
+mkdir -p "$OUTPUT_DIR"
 
 # The exact set of files Chrome loads at runtime: manifest.json, the files
 # it directly references (service worker, popup, icons, content scripts),
