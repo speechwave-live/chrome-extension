@@ -54,6 +54,10 @@ This automatically, for the duration of the run only:
   `requestFullscreen()` on the fixture's presentation container → asserts
   the overlay is reparented into `document.fullscreenElement` and its
   position doesn't shift.
+- **`overlay-editview-position.spec.js`** — a fixture simulating Google
+  Slides edit view (`#canvas-container` at a known rect, no presentation
+  iframe) → asserts `#speechwave-overlay` anchors to that rect instead of
+  the full browser viewport.
 - **`capture-script-sanity.spec.js`** — injects
   `docs/manual_tests/capture_real_google_slides_dom.js` into the local
   fixture page and asserts `window.captureGoogleSlidesDom()` reports the

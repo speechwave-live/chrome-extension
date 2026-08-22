@@ -22,4 +22,11 @@ async function openEditViewFixturePage(context) {
   return fixturePage;
 }
 
-module.exports = { openFixturePage, openWindowedFixturePage, openEditViewFixturePage };
+async function openEditViewCanvasFixturePage(context) {
+  const fixturePage = await context.newPage();
+  await fixturePage.goto(`http://localhost:${FIXTURE_PORT}/editview-canvas.html`);
+  await expect(fixturePage.locator("#speechwave-overlay")).toBeVisible();
+  return fixturePage;
+}
+
+module.exports = { openFixturePage, openWindowedFixturePage, openEditViewFixturePage, openEditViewCanvasFixturePage };
