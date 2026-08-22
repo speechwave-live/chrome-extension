@@ -62,10 +62,18 @@ in the reaction-cleanup path was hardened. See
 `v1.0.0/web-store-listing.md` now covers the full Dashboard capture
 (Title/Summary from package, Description, Category, Language, Graphic
 assets, Official/Homepage/Support URLs, Mature content), so the gap noted
-here earlier is closed. One thing still not independently verified: whether
-the four screenshots referenced elsewhere in this repo's docs are the exact
-four files uploaded to the Dashboard's Graphic assets section. Worth
-checking directly in the Dashboard before submitting.
+here earlier is closed.
+
+The four Dashboard screenshots were checked against `tmp/store-screenshots.png`
+(a capture of the live Dashboard's thumbnails). Three are current: the slide
+overlay, the audience reaction page, and the session analytics dashboard.
+**The fourth (popup mockup composited onto the slide) is stale**: it still
+shows the "Fireworks animations" checkbox removed from the popup on
+2026-07-28, same issue already fixed in the docs repo's
+`screenshot-extension-popup-connected.png`. This one is a composited
+marketing graphic, not a raw screenshot; its source file isn't in either
+repo, so it needs updating and re-uploading outside this repo before
+submitting.
 
 ## Files in this folder
 
