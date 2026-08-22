@@ -134,6 +134,7 @@ The content script polls the adapter every 500ms via `setInterval`. When the sli
 | `icons/` | Extension icons (16, 48, 128px PNG + SVG source) |
 | `bin/dev_mode_on` | Enable dev mode: `DEV_MODE=true` + localhost host permission |
 | `bin/dev_mode_off` | Disable dev mode: `DEV_MODE=false` + remove localhost host permission |
+| `bin/create_submission_zip.sh` | Build a Chrome Web Store submission zip from the current source |
 | `tests/` | Jest tests for popup, content, background, fireworks, adapters |
 | `tests/setup/` | Chrome API mocks for test environment |
 | `tests/fixtures/` | DOM snapshots for adapter tests |
@@ -196,6 +197,20 @@ mise run test
 
 `npm run test:e2e` runs a Playwright suite that loads the real extension
 against a live local speechwave dev server. See `docs/manual_tests.md`.
+
+### Build a Chrome Web Store submission zip
+
+```bash
+bin/create_submission_zip.sh
+```
+
+Produces `speechwave-v<version>.zip` (version read from `manifest.json`) in
+the repo root, containing only the files Chrome actually loads at runtime:
+no tests, docs, or dev tooling. It fails loudly if `manifest.json`
+references a file the script doesn't know to include, so a new content
+script or icon added to the manifest can't silently ship broken. The output
+zip is gitignored; upload it directly to the Chrome Web Store Developer
+Dashboard.
 
 ## License
 
