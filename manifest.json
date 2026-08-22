@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Speechwave",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Live emoji reactions overlay for conference talks",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
