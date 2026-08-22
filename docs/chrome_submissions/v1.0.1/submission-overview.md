@@ -27,10 +27,11 @@ in the reaction-cleanup path was hardened. See
       working against a real Speechwave talk
 - [x] `spawnEmoji`'s animation-cleanup path hardened with a safety-timeout
       fallback, mirroring the existing `spawnFireworks` pattern
-- [ ] Privacy policy (`speechwave` repo,
+- [x] Privacy policy (`speechwave` repo,
       `lib/speechwave_web/controllers/page_html/privacy.html.heex`) updated
       to disclose extension data handling (API key storage, slide-number
-      transmission). **Not done in this repo, tracked separately.**
+      transmission). Committed on `docs/privacy-policy-chrome-extension-disclosure`
+      in the `speechwave` repo, not yet merged.
 - [ ] Screenshots reviewed against current UI
 - [ ] Submitted via Chrome Web Store Developer Dashboard
 

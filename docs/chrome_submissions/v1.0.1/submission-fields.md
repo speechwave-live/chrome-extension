@@ -51,8 +51,8 @@ checkboxes the Dashboard's data-usage form presents:
 None of this is sold or shared with third parties; it's transmitted only to
 the user's own Speechwave account on `speechwave.live`.
 
-**Known gap:** `speechwave.live/privacy` doesn't yet mention the extension,
-local API key storage, or slide-number transmission specifically. See
-`submission-overview.md`'s checklist: this should be closed before
-submitting, since the Dashboard's data-usage declarations should match what's
-disclosed to users.
+`speechwave.live/privacy` now discloses the extension's local API key
+storage and slide-number transmission (`speechwave` repo, commit `377cc48`
+on `docs/privacy-policy-chrome-extension-disclosure`, not yet merged). Make
+sure that branch is merged and deployed before relying on this disclosure
+being live.
