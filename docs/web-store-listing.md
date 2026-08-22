@@ -9,7 +9,7 @@ Live emoji reactions on your Google Slides. Your audience reacts in real time wh
 **Live audience reactions, right on your slides.**
 
 Speechwave lets your audience send emoji reactions while you present. Reactions
-float up on your Google Slides in real time, so you get continuous engangement
+float up on your Google Slides in real time, so you get continuous engagement
 in the room and per-slide analytics afterward to see what landed.
 
 **How it works**
@@ -22,12 +22,12 @@ in the room and per-slide analytics afterward to see what landed.
 **Features**
 
 • Live emoji overlay on Google Slides (works in both editor and presentation mode)
-• Audience joins from any device — no app install, no login required
-• Per-slide reaction tracking — the extension detects your current slide automatically in presentation mode
-• Session analytics — review reaction counts and emoji breakdowns per slide after your talk
-• Fireworks animation — when the audience converges on a single emoji, a burst animation fires
-• Auto-reconnect — the connection stays up even if Chrome suspends the service worker
-• Secure API key authentication — only you can start sessions for your talks
+• Audience joins from any device without installing an app or logging in
+• Per-slide reaction tracking: the extension detects your current slide automatically in presentation mode
+• Session analytics: review reaction counts and emoji breakdowns per slide after your talk
+• Fireworks animation: when the audience converges on a single emoji, a burst animation fires
+• Auto-reconnect: the connection stays up even if Chrome suspends the service worker
+• Secure API key authentication: only you can start sessions for your talks
 
 **Who it's for**
 
