@@ -131,3 +131,89 @@ absent either a reliable repro or a matching production bug report. If it
 resurfaces (e.g. a user reports the overlay rendering off-slide in a
 windowed present mode), this capture and screenshot are the starting
 evidence to compare against.
+
+## Edit-view investigation
+
+A third real-world presentation pattern — presenting directly from the
+editor (`/edit` URL, no `punch-present-iframe` at all) — is tracked
+separately from the present-mode assumptions above, since (as of this
+section) no `content.js`/`adapters/google_slides.js` code encodes any of
+it yet; see `docs/specs/2026-08-21-google-slides-edit-view-recon-design.md`
+for the full design and `docs/manual_tests.md`'s "Verifying Google Slides
+edit-view DOM structure" section for the capture procedure using
+`docs/manual_tests/capture_google_slides_edit_dom.js`.
+
+### Capture history
+
+| Date | Capture files | Result |
+|---|---|---|
+| 2026-08-21 | `docs/manual_tests/captures/2026-08-21-editview.json`, `2026-08-21-editview-2.json` | Both open selector questions confirmed — see findings below. `truncated: false` in both; the walk completed without hitting its node budget. |
+
+### 2026-08-21 findings
+
+Both leads from the design doc were confirmed exactly as suspected, plus
+two additional signals neither capture was specifically seeking:
+
+1. **`div#canvas-container` hunch — confirmed.** Found in both captures,
+   identical rect `(253,196)–(1086,665)` (833×469, ~16:9) regardless of
+   which slide is displayed. No class attribute, just the bare id.
+
+2. **Filmstrip current-slide indicator — confirmed as suspected, no
+   semantic marker.** Each slide is a
+   `g.punch-filmstrip-thumbnail[data-slide-page-id="<pageId>"]`, containing
+   a `rect.punch-filmstrip-thumbnail-border`. That rect's `stroke`/
+   `stroke-width` is the *only* thing distinguishing selected from
+   unselected — identical class name either way:
+   - Selected: `stroke: rgb(11, 87, 208)`, `stroke-width: 4px`
+   - Unselected: `stroke: rgb(196, 199, 197)`, `stroke-width: 1px`
+
+   Confirmed by diffing the two captures: in `2026-08-21-editview.json` the
+   `data-slide-page-id="p"` thumbnail is highlighted; in
+   `2026-08-21-editview-2.json` it's `data-slide-page-id="g3f71a2fba3d_0_5"`
+   — matching each capture's URL (see next finding).
+
+3. **A simpler slide-id signal than the filmstrip: the URL itself.** The
+   page URL carries the current slide's id directly —
+   `.../edit?slide=id.p#slide=id.p` in the first capture,
+   `.../edit?slide=id.g3f71a2fba3d_0_5#slide=id.g3f71a2fba3d_0_5` in the
+   second. The same id also appears a third place: inside
+   `div#canvas-container`, the rendered slide content sits in an SVG group
+   whose id is literally `editor-<pageId>` (`editor-p` /
+   `editor-g3f71a2fba3d_0_5` respectively). All three locations (URL,
+   filmstrip `data-slide-page-id`, canvas SVG group id) agree in both
+   captures. `window.location.hash` needs no DOM query at all and would
+   slot directly into `content.js`'s existing 500ms-poll
+   (`startSlideObserver`) architecture. The id is opaque, not numeric —
+   getting an ordinal slide number requires finding its position among
+   `document.querySelectorAll('.punch-filmstrip-thumbnail[data-slide-page-id]')`
+   in DOM order, not parsing the id string itself. **Open concern raised
+   before that's implemented:** the filmstrip may include slides marked
+   "Skip slide" (hidden from the actual presentation) that would inflate a
+   naive DOM-order count — see "Open questions" below.
+
+4. **The canvas rect needs no letterbox math.** The `editor-<pageId>` SVG
+   group's own rect, `(254,197)–(1087,666)`, is exactly 1px inset from
+   `canvas-container`'s rect on every edge — matching `div.canvas`'s own
+   `border: 1px solid rgb(196, 199, 197)` captured on that element. So
+   `canvas-container`'s bounding rect is already the true visible-slide
+   rect directly, unlike present mode, which needs a separate sub-rect
+   computation to account for real letterboxing within the iframe.
+
+### Open questions
+
+- **Hidden ("Skip slide") entries in the filmstrip.** Raised during review
+  of these findings, not yet investigated: does a skipped slide still
+  appear as a `.punch-filmstrip-thumbnail` (with some additional marker),
+  or is it excluded from the filmstrip's DOM entirely? This matters because
+  the planned ordinal-numbering approach (finding a slide's position among
+  filmstrip thumbnails in DOM order) would be wrong if skipped slides are
+  present in that list but absent from the actual presentation's numbering.
+  If a skipped slide turns out to be the one currently selected in edit
+  view, reactions should likely attribute to slide `0` (the existing
+  "unknown slide" sentinel) rather than a real ordinal — same as today's
+  behavior when no slide can be determined at all. Needs a follow-up
+  capture: mark one slide as skipped via the "Skip slide" menu item, then
+  compare the filmstrip DOM against these two captures to see what changes.
+- Not yet tested against a non-16:9 deck — whether `canvas-container` still
+  needs no separate letterbox math when the deck's own aspect ratio doesn't
+  match the editor's canvas area.
