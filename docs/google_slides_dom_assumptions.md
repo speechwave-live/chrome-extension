@@ -149,6 +149,7 @@ edit-view DOM structure" section for the capture procedure using
 |---|---|---|
 | 2026-08-21 | `docs/manual_tests/captures/2026-08-21-editview.json`, `2026-08-21-editview-2.json` | Both open selector questions confirmed — see findings below. `truncated: false` in both; the walk completed without hitting its node budget. |
 | 2026-08-21 | `docs/manual_tests/captures/2026-08-21-editview-skip-3-unselected.json`, `2026-08-21-editview-skip-3-selected.json` | Follow-up investigating the "Skip slide" open question below. Recon-script diff showed no visible difference — resolved instead via a manual DevTools snippet, not a full recapture. `truncated: false` in both. |
+| 2026-08-21 | `docs/manual_tests/captures/2026-08-21-editview-large-skip-3-unselected.json` | Test deck expanded to 30 slides (slide 3 still skipped) to stress-test ordinal-numbering at realistic scale. Found filmstrip virtualization: only 14 of 30 thumbnails rendered in the DOM (`truncated: false` — a real Google behavior, not the recon script's node budget). See findings below — this reopens and ultimately drops the slide-number detection plan. |
 
 ### 2026-08-21 findings
 
@@ -245,21 +246,77 @@ image-URL or dimming-opacity heuristic needed: a slide is skipped iff its
 `.punch-filmstrip-thumbnail[data-slide-page-id="<id>"]`'s inner
 rendered-content `<svg>` has a `<title>` child element at all.
 
-This resolves the ordinal-numbering concern: computing a slide's position
-among `.punch-filmstrip-thumbnail` elements in DOM order must first filter
-out any thumbnail whose inner content carries this `<title>` marker. If
-the currently-selected slide (per the URL/`editor-<pageId>` signal) is
-itself one of the filtered-out (skipped) ones, that's the case discussed
-above where reactions should attribute to slide `0` rather than a
-computed ordinal.
+At the time, this appeared to resolve the ordinal-numbering concern:
+computing a slide's position among `.punch-filmstrip-thumbnail` elements
+in DOM order, filtering out any thumbnail carrying the `<title>` marker.
+**Superseded by the virtualization finding below** — the DOM-order
+approach turned out not to work regardless of skip-filtering, once decks
+get large enough that the filmstrip doesn't render every thumbnail at once.
+
+### 2026-08-21 findings (continued): filmstrip virtualization breaks DOM-order counting
+
+The test deck was expanded to 30 slides (slide 3 still skipped) to
+stress-test the ordinal-numbering approach against a more realistic deck
+size, capturing with slide 1 selected:
+`docs/manual_tests/captures/2026-08-21-editview-large-skip-3-unselected.json`.
+
+**Only 14 of the 30 slides' `.punch-filmstrip-thumbnail` elements exist in
+the DOM at all** (`p`, `g3f075e61544_1_0`, `g3f71a2fba3d_0_5`,
+`g3f71a2fba3d_0_22`, then `g3f7966c5cf3_0_0` through `..._238`) —
+`truncated: false`, so this isn't the recon script's node budget; Google
+genuinely virtualizes the filmstrip, rendering only a window of thumbnails
+near the current scroll position. This breaks the DOM-order ordinal
+approach outright: a slide's position among only the currently-rendered
+thumbnails is not its true position in the deck.
+
+A candidate alternative was investigated by hand: each rendered
+thumbnail's internal content is namespaced under an id like
+`filmstrip-slide-<N>-<pageId>` (e.g.
+`filmstrip-slide-4-g3f7966c5cf3_0_0`, found to contain the text "5" — this
+test deck was deliberately built with each slide displaying its own true
+ordinal as visible slide content, specifically to let a human verify
+findings like this one by eye). Working through the arithmetic: if `<N>`
+excluded the skipped slide from its count, a slide at true ordinal 5 (with
+ordinal 3 skipped) would be at presentation-position 3, not 4. The
+observed value, `filmstrip-slide-4`, instead matches a raw 0-based count
+that *includes* the skipped slide — i.e. `<N>` is just the thumbnail's
+position within whatever's currently rendered, the same window-relative
+count as `.punch-filmstrip-thumbnail` DOM order already gives. Not a new
+signal, and still virtualization-scoped.
+
+No other total-count or absolute-position signal was found. Real customer
+decks won't have their own ordinal number written into their slide content
+the way this test deck does, so that path (even if it had worked) was
+never going to generalize.
+
+**Decision: slide-number detection for edit view is dropped.**
+`adapters/google_slides.js`'s `getSlide()` continues returning the `0`
+("unknown slide") sentinel for edit view, same as today — overlay
+anchoring (unaffected by virtualization) is the only edit-view feature
+going into `content.js`/`adapters/google_slides.js`. See
+`docs/specs/2026-08-21-google-slides-edit-view-support-design.md` for the
+resulting implementation scope. A programmatic scroll-and-enumerate
+approach to defeat virtualization was considered and rejected as
+disproportionately complex and intrusive (would visibly hijack the
+presenter's own filmstrip scroll position) for what it would buy.
+
+There's a real argument this is fine on its own terms, not just an
+accepted limitation: if a presenter drops into edit view from present mode
+to field audience questions and jumps between slides doing so, attributing
+those reactions to whichever slide they land on wouldn't accurately
+reflect how the presentation proper went — only the Q&A tail. Leaving
+those reactions unattributed (slide `0`), while still showing them in the
+overlay live, may produce more meaningful downstream stats than a
+computed-but-contextually-misleading slide number would.
 
 ### Open questions
 
 - Not yet tested against a non-16:9 deck — whether `canvas-container` still
   needs no separate letterbox math when the deck's own aspect ratio doesn't
   match the editor's canvas area.
-- The exact selector path to the `<title>` marker (which unnamed/nested `g`
-  reliably holds it across different deck themes/layouts) hasn't been
-  stress-tested beyond this one 4-slide deck — worth confirming against a
-  deck with different slide dimensions or a non-default theme before
-  `content.js`/`adapters/google_slides.js` code depends on it.
+- The exact selector path to the skip `<title>` marker (which unnamed/nested
+  `g` reliably holds it across different deck themes/layouts) hasn't been
+  stress-tested beyond this one deck's theme — moot for the current
+  overlay-only implementation scope, but worth knowing if skip detection is
+  ever revisited (e.g. if a future absolute-position signal makes ordinal
+  detection viable again).
