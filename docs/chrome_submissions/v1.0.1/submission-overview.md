@@ -67,13 +67,14 @@ here earlier is closed.
 The four Dashboard screenshots were checked against `tmp/store-screenshots.png`
 (a capture of the live Dashboard's thumbnails). Three are current: the slide
 overlay, the audience reaction page, and the session analytics dashboard.
-**The fourth (popup mockup composited onto the slide) is stale**: it still
-shows the "Fireworks animations" checkbox removed from the popup on
+The fourth (popup mockup composited onto the slide) was stale: it still
+showed the "Fireworks animations" checkbox removed from the popup on
 2026-07-28, same issue already fixed in the docs repo's
-`screenshot-extension-popup-connected.png`. This one is a composited
-marketing graphic, not a raw screenshot; its source file isn't in either
-repo, so it needs updating and re-uploading outside this repo before
-submitting.
+`screenshot-extension-popup-connected.png`. No source file for the original
+composite existed in either repo, so a replacement was rebuilt from
+`screenshot-slides-overlay.png` plus a corrected popup screenshot
+(`screenshot-popup-mockup.png` in this folder, 1280x800, no alpha, matches
+Dashboard requirements). Upload it in place of the stale one.
 
 ## Files in this folder
 
@@ -82,3 +83,5 @@ submitting.
 - `submission-fields.md`: permission justifications, single-purpose
   description, and other Developer Dashboard form fields
 - `release-notes.md`: the "what's new" text for this version
+- `screenshot-popup-mockup.png`: replacement for the stale Dashboard
+  screenshot (see "Known gaps" above)
