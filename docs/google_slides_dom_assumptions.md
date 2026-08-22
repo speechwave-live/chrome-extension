@@ -148,6 +148,7 @@ edit-view DOM structure" section for the capture procedure using
 | Date | Capture files | Result |
 |---|---|---|
 | 2026-08-21 | `docs/manual_tests/captures/2026-08-21-editview.json`, `2026-08-21-editview-2.json` | Both open selector questions confirmed — see findings below. `truncated: false` in both; the walk completed without hitting its node budget. |
+| 2026-08-21 | `docs/manual_tests/captures/2026-08-21-editview-skip-3-unselected.json`, `2026-08-21-editview-skip-3-selected.json` | Follow-up investigating the "Skip slide" open question below. Recon-script diff showed no visible difference — resolved instead via a manual DevTools snippet, not a full recapture. `truncated: false` in both. |
 
 ### 2026-08-21 findings
 
@@ -199,21 +200,66 @@ two additional signals neither capture was specifically seeking:
    rect directly, unlike present mode, which needs a separate sub-rect
    computation to account for real letterboxing within the iframe.
 
+### 2026-08-21 findings (continued): "Skip slide" detection
+
+Follow-up investigation, prompted by the concern above that a naive
+DOM-order count over `.punch-filmstrip-thumbnail` elements would be wrong
+if skipped slides are present in the filmstrip but absent from the actual
+presentation's numbering.
+
+Slide 3 (of 4) was marked "Skip slide" via the editor's Slide menu, then
+captured twice: once with a different slide selected
+(`2026-08-21-editview-skip-3-unselected.json`) and once with the skipped
+slide itself selected (`2026-08-21-editview-skip-3-selected.json`), both
+diffed against the original (unskipped) captures. Visual confirmation of
+what the skip treatment actually looks like in the filmstrip:
+`docs/manual_tests/captures/2026-08-21-editview-skip-3-filmstrip.png`
+(slide 3, selected, showing the dimmed content and eye-slash icon).
+
+**The recon script's structural diff showed no difference at all** for the
+skipped thumbnail — same classes, attributes, and `childCount` in every
+capture. This is a real, understood tooling gap, not evidence that no
+marker exists:
+
+- The script doesn't capture `opacity`/`fill`-related computed style, only
+  `border`/`outline`/`box-shadow`/`stroke`.
+- `MAX_SVG_DEPTH = 2` caps traversal exactly at the boundary of an unnamed
+  `g` (`childCount: 2`) holding the thumbnail's rendered mini-content —
+  hiding anything nested one level deeper, skipped or not.
+
+Resolved by hand instead of extending the script: a one-off DevTools
+snippet dumped that inner group's `outerHTML` directly. It contains, only
+when skipped:
+- A semi-transparent white overlay (`<path fill="#fff" fill-opacity="0.5"
+  .../>`) dimming the rendered content — not an `opacity` property on any
+  element, an actual overlay shape.
+- A clipped `<image xlink:href="//ssl.gstatic.com/docs/presentations/images/hide_slide.png">`
+  (the eye-slash badge visible in the filmstrip).
+- **`<title>Skipped in slideshow mode</title>`** as a child of the
+  thumbnail's inner rendered-content `<svg>`.
+
+A second snippet confirmed the `<title>` element is *absent entirely* on a
+normal (non-skipped) thumbnail (`titleText: null`), not merely present
+with different text. So detection is a clean presence check — no fragile
+image-URL or dimming-opacity heuristic needed: a slide is skipped iff its
+`.punch-filmstrip-thumbnail[data-slide-page-id="<id>"]`'s inner
+rendered-content `<svg>` has a `<title>` child element at all.
+
+This resolves the ordinal-numbering concern: computing a slide's position
+among `.punch-filmstrip-thumbnail` elements in DOM order must first filter
+out any thumbnail whose inner content carries this `<title>` marker. If
+the currently-selected slide (per the URL/`editor-<pageId>` signal) is
+itself one of the filtered-out (skipped) ones, that's the case discussed
+above where reactions should attribute to slide `0` rather than a
+computed ordinal.
+
 ### Open questions
 
-- **Hidden ("Skip slide") entries in the filmstrip.** Raised during review
-  of these findings, not yet investigated: does a skipped slide still
-  appear as a `.punch-filmstrip-thumbnail` (with some additional marker),
-  or is it excluded from the filmstrip's DOM entirely? This matters because
-  the planned ordinal-numbering approach (finding a slide's position among
-  filmstrip thumbnails in DOM order) would be wrong if skipped slides are
-  present in that list but absent from the actual presentation's numbering.
-  If a skipped slide turns out to be the one currently selected in edit
-  view, reactions should likely attribute to slide `0` (the existing
-  "unknown slide" sentinel) rather than a real ordinal — same as today's
-  behavior when no slide can be determined at all. Needs a follow-up
-  capture: mark one slide as skipped via the "Skip slide" menu item, then
-  compare the filmstrip DOM against these two captures to see what changes.
 - Not yet tested against a non-16:9 deck — whether `canvas-container` still
   needs no separate letterbox math when the deck's own aspect ratio doesn't
   match the editor's canvas area.
+- The exact selector path to the `<title>` marker (which unnamed/nested `g`
+  reliably holds it across different deck themes/layouts) hasn't been
+  stress-tested beyond this one 4-slide deck — worth confirming against a
+  deck with different slide dimensions or a non-default theme before
+  `content.js`/`adapters/google_slides.js` code depends on it.
