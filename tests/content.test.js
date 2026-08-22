@@ -412,6 +412,22 @@ describe("RENDER_EMOJI message", () => {
 
     jest.useRealTimers();
   });
+
+  test("clears the safety timer once animationend fires normally", () => {
+    jest.useFakeTimers();
+    const { messageHandler } = loadContent();
+
+    messageHandler({ type: "RENDER_EMOJI", emoji: "🎉" }, {}, jest.fn());
+    const span = document.getElementById("speechwave-overlay").querySelector("span");
+    span.dispatchEvent(new Event("animationend"));
+
+    // The happy path shouldn't leave the fallback safety timer dangling in
+    // the queue for its remaining ~500ms — it should be canceled as soon as
+    // the real cleanup path wins.
+    expect(jest.getTimerCount()).toBe(0);
+
+    jest.useRealTimers();
+  });
 });
 
 describe("slide observer", () => {

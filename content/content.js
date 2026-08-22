@@ -220,12 +220,13 @@ function spawnEmoji(emoji) {
   const cleanupSpan = () => {
     if (cleaned) return;
     cleaned = true;
+    clearTimeout(safetyTimer);
     el.remove();
     inFlight[emoji] = Math.max(0, (inFlight[emoji] || 0) - 1);
     if (inFlight[emoji] === 0) delete inFlight[emoji];
   };
   el.addEventListener("animationend", cleanupSpan);
-  setTimeout(cleanupSpan, EMOJI_FLOAT_DURATION_MS + EMOJI_CLEANUP_SAFETY_BUFFER_MS);
+  const safetyTimer = setTimeout(cleanupSpan, EMOJI_FLOAT_DURATION_MS + EMOJI_CLEANUP_SAFETY_BUFFER_MS);
 
   maybeSpawnFireworks(emoji);
 }
